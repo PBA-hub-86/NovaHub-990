@@ -1,0 +1,6 @@
+{
+  "name": "NovaHub",
+  "description": "NovaHub — Public Social Community, HTML5 Game Arcade, Stills Gallery, Live Chat & Creator Hub.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

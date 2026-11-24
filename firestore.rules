@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(userId) &&
+        request.resource.data.keys().hasAll(['displayName', 'email']) &&
+        request.resource.data.displayName is string &&
+        request.resource.data.displayName.size() > 0 &&
+        request.resource.data.displayName.size() <= 100;
+      allow delete: if false;
+    }
+
+    // Social feed posts
+    match /social_posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.authorId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['authorId', 'authorName', 'textContent']) &&
+        request.resource.data.textContent is string &&
+        request.resource.data.textContent.size() > 0 &&
+        request.resource.data.textContent.size() <= 2000;
+      allow update: if isAuthenticated() && (
+        // Allow author to edit or any authenticated user to toggle like
+        request.resource.data.authorId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'likedUserIds'])
+      );
+      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+    }
+
+    // Published community HTML5 games and apps
+    match /community_games/{gameId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.authorId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['authorId', 'authorName', 'title', 'webGameUrl']) &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 120 &&
+        request.resource.data.webGameUrl is string &&
+        (request.resource.data.webGameUrl.matches('^https?://.*'));
+      allow update: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+    }
+
+    // Community live chat messages
+    match /chat_messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.senderId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['senderId', 'senderName', 'messageText']) &&
+        request.resource.data.messageText is string &&
+        request.resource.data.messageText.size() > 0 &&
+        request.resource.data.messageText.size() <= 1000;
+      allow update: if false;
+      allow delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+    }
+  }
+}

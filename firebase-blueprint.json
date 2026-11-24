@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "User": {
+      "collection": "users",
+      "fields": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatarInitials": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      }
+    },
+    "SocialPost": {
+      "collection": "social_posts",
+      "fields": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "textContent": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "createdAt": { "type": "timestamp" }
+      }
+    },
+    "CommunityGame": {
+      "collection": "community_games",
+      "fields": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "description": { "type": "string" },
+        "webGameUrl": { "type": "string" },
+        "techStack": { "type": "string" },
+        "imageUri": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      }
+    },
+    "ChatMessage": {
+      "collection": "chat_messages",
+      "fields": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "messageText": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      }
+    }
+  }
+}

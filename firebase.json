@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-android-prantoba-2405c147-0f24-472a-b249-520d27a12346",
+      "rules": "firestore.rules"
+    }
+  ]
+}
