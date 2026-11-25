@@ -77,22 +77,37 @@ import com.example.ui.theme.StudioTextMuted
 import com.example.ui.theme.StudioTextPrimary
 import com.example.ui.theme.StudioTextSecondary
 
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.example.ui.ActiveNativeGame
+import com.example.ui.theme.LocalStudioAccent
+
 /**
  * Dedicated Game Portal UI Component
- * Displays a list of browser-based and in-app kinetic games with rich tags, live launch actions,
- * leaderboards, and user-published game integration.
+ * Displays in-app native 60fps arcade games, Care Survey 89 live experience, browser-based HTML5 games,
+ * instant search/genre filters, Sound FX toggle, and community publishing.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GamePortalComponent(
     games: List<StudioGame>,
-    highScore: Int,
-    onLaunchGame: () -> Unit,
+    voidRunnerHighScore: Int,
+    cyberBreakerHighScore: Int,
+    quantum2048HighScore: Int,
+    soundEffectsEnabled: Boolean,
+    onToggleSoundEffects: () -> Unit,
+    onLaunchNativeGame: (ActiveNativeGame) -> Unit,
     onLaunchWebGame: (StudioGame) -> Unit,
     onOpenPublishGameDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val accent = LocalStudioAccent.current
     var selectedGenre by remember { mutableStateOf("All") }
+    var gameSearchQuery by remember { mutableStateOf("") }
     var isGridView by remember { mutableStateOf(true) }
 
     // Expanded suite of browser-based games
@@ -132,16 +147,44 @@ fun GamePortalComponent(
         games + additionalBrowserGames.filter { it.id !in existingIds }
     }
 
-    val genres = listOf("All", "Web Games", "Arcade", "Puzzle", "Retro Racer", "Community Creations")
+    val genres = listOf("All", "In-App Arcade", "Web Games", "Puzzle", "Action", "Community Creations")
 
-    val filteredGames = remember(allGamesList, selectedGenre) {
-        when (selectedGenre) {
+    val filteredGames = remember(allGamesList, selectedGenre, gameSearchQuery) {
+        val genreFiltered = when (selectedGenre) {
+            "In-App Arcade" -> allGamesList.filter { it.isPlayableInApp && !it.isWebGame }
             "Web Games" -> allGamesList.filter { it.isWebGame }
-            "Arcade" -> allGamesList.filter { it.subtitle.contains("Arcade", ignoreCase = true) || it.title.contains("Void", ignoreCase = true) || it.title.contains("Pacman", ignoreCase = true) }
-            "Puzzle" -> allGamesList.filter { it.subtitle.contains("Puzzle", ignoreCase = true) || it.title.contains("Echoes", ignoreCase = true) || it.title.contains("Tetris", ignoreCase = true) || it.title.contains("Hex", ignoreCase = true) }
-            "Retro Racer" -> allGamesList.filter { it.subtitle.contains("Racer", ignoreCase = true) || it.title.contains("Drift", ignoreCase = true) }
+            "Action" -> allGamesList.filter {
+                it.subtitle.contains("Arcade", ignoreCase = true) ||
+                    it.title.contains("Void", ignoreCase = true) ||
+                    it.title.contains("Breaker", ignoreCase = true) ||
+                    it.title.contains("Pacman", ignoreCase = true)
+            }
+            "Puzzle" -> allGamesList.filter {
+                it.subtitle.contains("Puzzle", ignoreCase = true) ||
+                    it.title.contains("2048", ignoreCase = true) ||
+                    it.title.contains("Tetris", ignoreCase = true) ||
+                    it.title.contains("Hex", ignoreCase = true)
+            }
             "Community Creations" -> allGamesList.filter { it.isUserPublished }
             else -> allGamesList
+        }
+        val q = gameSearchQuery.trim().lowercase()
+        if (q.isBlank()) genreFiltered
+        else genreFiltered.filter {
+            it.title.lowercase().contains(q) ||
+                it.subtitle.lowercase().contains(q) ||
+                it.description.lowercase().contains(q) ||
+                it.techStack.any { t -> t.lowercase().contains(q) }
+        }
+    }
+
+    fun launchGameByModel(game: StudioGame) {
+        when {
+            game.id == "void_runner" -> onLaunchNativeGame(ActiveNativeGame.VOID_RUNNER)
+            game.id == "cyber_breaker" -> onLaunchNativeGame(ActiveNativeGame.CYBER_BREAKER)
+            game.id == "quantum_2048" -> onLaunchNativeGame(ActiveNativeGame.QUANTUM_2048)
+            game.isPlayableInApp && !game.isWebGame -> onLaunchNativeGame(ActiveNativeGame.VOID_RUNNER)
+            else -> onLaunchWebGame(game)
         }
     }
 
@@ -157,7 +200,10 @@ fun GamePortalComponent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
@@ -166,40 +212,77 @@ fun GamePortalComponent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "03 / GAME PORTAL & BROWSER ARCADE",
+                    text = "02 / GAME PORTAL & IN-APP ARCADE",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = StudioCyan,
-                    letterSpacing = 1.4.sp
+                    letterSpacing = 1.3.sp
                 )
             }
 
-            // Publish Web Game Button
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = StudioCyan.copy(alpha = 0.15f),
-                border = BorderStroke(1.dp, StudioCyan.copy(alpha = 0.5f)),
-                modifier = Modifier
-                    .clickable(onClick = onOpenPublishGameDialog)
-                    .testTag("portal_publish_game_btn")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Sound FX Toggle
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = StudioSurfaceElevated,
+                    border = BorderStroke(
+                        1.dp,
+                        if (soundEffectsEnabled) accent.copy(alpha = 0.6f) else StudioCardBorder
+                    ),
+                    modifier = Modifier
+                        .clickable(onClick = onToggleSoundEffects)
+                        .testTag("portal_sound_toggle_btn")
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        tint = StudioCyan,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "+ গেম বা অ্যাপ যুক্ত করুন",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StudioCyan
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (soundEffectsEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                            contentDescription = "Toggle Arcade Sound Effects",
+                            tint = if (soundEffectsEnabled) accent else StudioTextMuted,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (soundEffectsEnabled) "SFX On" else "Muted",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (soundEffectsEnabled) accent else StudioTextMuted
+                        )
+                    }
+                }
+
+                // Publish Web Game Button
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = StudioCyan.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, StudioCyan.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .clickable(onClick = onOpenPublishGameDialog)
+                        .testTag("portal_publish_game_btn")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Game or Web App",
+                            tint = StudioCyan,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "+ Add Game / App",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StudioCyan
+                        )
+                    }
                 }
             }
         }
@@ -224,141 +307,54 @@ fun GamePortalComponent(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Featured In-App Canvas Game Banner (Void Runner)
-        Card(
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = StudioSurfaceElevated),
-            border = BorderStroke(1.dp, StudioGold.copy(alpha = 0.6f)),
+        // Built-In In-App 60FPS Arcade Trio
+        Text(
+            text = "Built-In 60FPS Native Arcade",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = accent
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onLaunchGame)
-                .testTag("featured_void_runner_card")
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                ) {
-                    AsyncImage(
-                        model = R.drawable.game_void_runner_1789660196140,
-                        contentDescription = "Void Runner",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color(0xE008090C))
-                                )
-                            )
-                    )
-
-                    // Top Row Badges
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = StudioGold
-                        ) {
-                            Text(
-                                text = "FEATURED IN-APP DEMO",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                                color = StudioDarkBg,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-
-                        if (highScore > 0) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = Color(0xCC000000),
-                                border = BorderStroke(1.dp, StudioGold)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Leaderboard,
-                                        contentDescription = null,
-                                        tint = StudioGold,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "High Score: $highScore",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StudioGold,
-                                        fontFamily = FontFamily.Monospace
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Bottom info on banner
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = "Void Runner: Kinetic Dodge",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StudioTextPrimary
-                        )
-                        Text(
-                            text = "Sub-16ms tactile 2D canvas physics & real-time particle collision engine.",
-                            fontSize = 12.sp,
-                            color = StudioTextSecondary
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Instant 60FPS • No Web Download Required",
-                        fontSize = 11.sp,
-                        color = StudioEmerald,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Button(
-                        onClick = onLaunchGame,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StudioGold,
-                            contentColor = StudioDarkBg
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Play Demo", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                }
-            }
+            NativeArcadeSpotlightCard(
+                title = "Void Runner",
+                tagline = "Kinetic Dodge & Shards",
+                badge = "ACTION • 60FPS",
+                bestScore = voidRunnerHighScore,
+                color = StudioGold,
+                onClick = { onLaunchNativeGame(ActiveNativeGame.VOID_RUNNER) },
+                modifier = Modifier
+                    .width(205.dp)
+                    .testTag("featured_void_runner_card")
+            )
+            NativeArcadeSpotlightCard(
+                title = "Cyber Brick Breaker",
+                tagline = "Powerups & Neon Combos",
+                badge = "ARCADE • NEW",
+                bestScore = cyberBreakerHighScore,
+                color = StudioCyan,
+                onClick = { onLaunchNativeGame(ActiveNativeGame.CYBER_BREAKER) },
+                modifier = Modifier
+                    .width(205.dp)
+                    .testTag("featured_cyber_breaker_card")
+            )
+            NativeArcadeSpotlightCard(
+                title = "Quantum 2048",
+                tagline = "Swipe Matrix & Undo",
+                badge = "PUZZLE • NEW",
+                bestScore = quantum2048HighScore,
+                color = StudioEmerald,
+                onClick = { onLaunchNativeGame(ActiveNativeGame.QUANTUM_2048) },
+                modifier = Modifier
+                    .width(205.dp)
+                    .testTag("featured_quantum_2048_card")
+            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -369,7 +365,7 @@ fun GamePortalComponent(
                 id = "care_survey_89",
                 title = "Care Survey 89",
                 subtitle = "Interactive Web Game & Experience",
-                description = "নতুন যুক্ত করা সরাসরি অনলাইন ওয়েব গেম ও ইন্টারঅ্যাক্টিভ এক্সপেরিয়েন্স — কোনো ডাউনলোড ছাড়াই ইন-অ্যাপ WebView-তে খেলুন।",
+                description = "Live online web game and interactive experience — launch instantly inside the in-app WebView sandbox with zero downloads.",
                 techStack = listOf("HTML5", "Cloudflare Workers", "Interactive Web"),
                 status = "Featured Live",
                 isPlayableInApp = true,
@@ -448,7 +444,37 @@ fun GamePortalComponent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Inline Portal Game Search
+        OutlinedTextField(
+            value = gameSearchQuery,
+            onValueChange = { gameSearchQuery = it },
+            placeholder = { Text("Search portal games, engines, or URLs...", color = StudioTextMuted, fontSize = 13.sp) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = StudioCyan, modifier = Modifier.size(18.dp)) },
+            trailingIcon = {
+                if (gameSearchQuery.isNotEmpty()) {
+                    androidx.compose.material3.IconButton(onClick = { gameSearchQuery = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear search", tint = StudioTextSecondary, modifier = Modifier.size(16.dp))
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = StudioCyan,
+                unfocusedBorderColor = StudioCardBorder,
+                focusedContainerColor = StudioSurface,
+                unfocusedContainerColor = StudioSurface,
+                focusedTextColor = StudioTextPrimary,
+                unfocusedTextColor = StudioTextPrimary
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("portal_search_input")
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Genre filter pills & Grid/List view toggle row
         Row(
@@ -532,13 +558,7 @@ fun GamePortalComponent(
                 filteredGames.forEach { game ->
                     BrowserGameGridCard(
                         game = game,
-                        onLaunch = {
-                            if (game.isPlayableInApp && !game.isWebGame) {
-                                onLaunchGame()
-                            } else {
-                                onLaunchWebGame(game)
-                            }
-                        },
+                        onLaunch = { launchGameByModel(game) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -548,15 +568,82 @@ fun GamePortalComponent(
                 filteredGames.forEach { game ->
                     BrowserGamePortalCard(
                         game = game,
-                        onLaunch = {
-                            if (game.isPlayableInApp && !game.isWebGame) {
-                                onLaunchGame()
-                            } else {
-                                onLaunchWebGame(game)
-                            }
-                        }
+                        onLaunch = { launchGameByModel(game) }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NativeArcadeSpotlightCard(
+    title: String,
+    tagline: String,
+    badge: String,
+    bestScore: Int,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = StudioSurfaceElevated),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.6f)),
+        modifier = modifier.clickable(onClick = onClick)
+    ) {
+        Column(modifier = Modifier.padding(13.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(shape = RoundedCornerShape(5.dp), color = color) {
+                    Text(
+                        text = badge,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        color = StudioDarkBg,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+                if (bestScore > 0) {
+                    Text(
+                        text = "Best $bestScore",
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        color = color
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = StudioTextPrimary,
+                maxLines = 1
+            )
+            Text(
+                text = tagline,
+                fontSize = 11.sp,
+                color = StudioTextSecondary,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = onClick,
+                colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = StudioDarkBg),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(34.dp)
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Play Now", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

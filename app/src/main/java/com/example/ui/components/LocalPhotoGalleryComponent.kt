@@ -324,7 +324,7 @@ fun LocalPhotoGalleryComponent(
 
         // Title & Description
         Text(
-            text = "স্টুডিও ফটো গ্যালারি ও আর্ট আর্কাইভ",
+            text = "Studio Photo Gallery & Art Archive",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = StudioTextPrimary
@@ -333,7 +333,7 @@ fun LocalPhotoGalleryComponent(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Coil লাইব্রেরির মাধ্যমে অপ্টিমাইজড মেমরি ও লো-লেটেন্সি লোডিং সহ স্থানীয় ফটোগুলো ব্রাউজ করুন।",
+            text = "Browse local photography and digital art frames loaded with Coil memory and disk caching.",
             style = MaterialTheme.typography.bodyMedium,
             color = StudioTextSecondary,
             lineHeight = 20.sp
@@ -345,7 +345,7 @@ fun LocalPhotoGalleryComponent(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("ফটো খুঁজুন (টাইটেল, লোকেশন, EXIF)...", color = StudioTextMuted, fontSize = 12.sp) },
+            placeholder = { Text("Search photos (title, location, EXIF)...", color = StudioTextMuted, fontSize = 12.sp) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -437,7 +437,7 @@ fun LocalPhotoGalleryComponent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "কোনো ফটো পাওয়া যায়নি",
+                        text = "No matching photos found",
                         color = StudioTextMuted,
                         fontSize = 13.sp
                     )
@@ -849,7 +849,7 @@ private fun PhotoDetailLightboxDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "ফটোগ্রাফি অপটিক্স ও অ্যাসেট স্পেকস",
+                                text = "Photography Optics & Asset Specs",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = StudioGold
@@ -858,11 +858,11 @@ private fun PhotoDetailLightboxDialog(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        ExifSpecRow(label = "এক্সপোজার প্যারামিটার", value = photo.exif)
-                        ExifSpecRow(label = "ফোকাল লেন্থ ও লেন্স", value = photo.focalLength)
-                        ExifSpecRow(label = "রেজোলিউশন ও ফরম্যাট", value = photo.resolution)
-                        ExifSpecRow(label = "ক্যাটাগরি ও স্টাইল", value = "${photo.category} (${photo.tag})")
-                        ExifSpecRow(label = "ইমেজ লোডার পাইপলাইন", value = "Coil 2.7 • Async Memory Cache")
+                        ExifSpecRow(label = "Exposure Parameters", value = photo.exif)
+                        ExifSpecRow(label = "Focal Length & Lens", value = photo.focalLength)
+                        ExifSpecRow(label = "Resolution & Format", value = photo.resolution)
+                        ExifSpecRow(label = "Category & Style", value = "${photo.category} (${photo.tag})")
+                        ExifSpecRow(label = "Image Loader Pipeline", value = "Coil 2.7 • Async Memory Cache")
                     }
                 }
             }

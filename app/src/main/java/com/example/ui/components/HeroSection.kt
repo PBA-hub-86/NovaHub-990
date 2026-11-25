@@ -102,7 +102,7 @@ fun HeroSection(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "নোভা হাব কমিউনিটি",
+                text = "NovaHub Community",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = StudioGold
@@ -113,7 +113,7 @@ fun HeroSection(
 
         // Big Cinematic Editorial Headline
         Text(
-            text = "পাবলিক সোশ্যাল,\nগেমস এবং ক্রিয়েটর হাব।",
+            text = "Public Social,\nGames & Creator Hub.",
             style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold,
             color = StudioTextPrimary,
@@ -124,7 +124,7 @@ fun HeroSection(
 
         // Bio & Statement
         Text(
-            text = "সবাইকে স্বাগতম! এখানে লাইভ ওয়েব গেমস (যেমন Care Survey 89) খেলুন, ছবি ও ভিডিও শেয়ার করুন, ব্লগ পড়ুন এবং কমিউনিটির সবার সাথে লাইভ চ্যাটে যুক্ত হোন। আপনার সব ডেটা নিরাপদে সংরক্ষিত থাকে।",
+            text = "Welcome! Play instant arcade and live web games (including Care Survey 89), share photos in our Cloud Gallery, read essays, and connect in live community chat.",
             style = MaterialTheme.typography.bodyLarge,
             color = StudioTextSecondary,
             lineHeight = 22.sp
@@ -150,7 +150,7 @@ fun HeroSection(
                     .testTag("hero_open_social_btn")
             ) {
                 Text(
-                    text = "সোশ্যাল ফিড 🔥",
+                    text = "Social Feed 🔥",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -176,7 +176,7 @@ fun HeroSection(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "গেমস",
+                    text = "Games",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp
                 )
@@ -215,13 +215,13 @@ fun HeroSection(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "ম্যাসনরি ফটো গ্যালারি • ফাইন আর্ট স্টিলস",
+                        text = "Masonry Photo Gallery • Fine Art Stills",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = StudioTextPrimary
                     )
                     Text(
-                        text = "Coil অপ্টিমাইজড ক্যাশিং সহ ব্যক্তিগত ছবি সংরক্ষণ",
+                        text = "Personal photo & cloud archive powered by Coil caching",
                         fontSize = 11.sp,
                         color = StudioTextSecondary
                     )
@@ -235,7 +235,7 @@ fun HeroSection(
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = "ফটো দেখুন",
+                    text = "View Gallery",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF08090C)
@@ -262,20 +262,20 @@ fun HeroSection(
                         putExtra(Intent.EXTRA_SUBJECT, "NovaHub — Games & Social Community")
                         putExtra(
                             Intent.EXTRA_TEXT,
-                            "NovaHub-এ যুক্ত হোন! ইন-অ্যাপ HTML5 গেম খেলুন, ছবি শেয়ার করুন এবং কমিউনিটির সাথে লাইভ চ্যাট করুন!"
+                            "Join NovaHub! Play built-in arcade & HTML5 games, explore the Cloud Gallery, and chat live with the community!"
                         )
                     }
                     try {
-                        context.startActivity(Intent.createChooser(shareIntent, "বন্ধুদের সাথে শেয়ার করুন"))
+                        context.startActivity(Intent.createChooser(shareIntent, "Share NovaHub with Friends"))
                     } catch (_: Exception) {}
                 }
                 .padding(14.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             StudioStatItem(
-                value = "07+",
+                value = "09+",
                 label = "GAMES",
-                sub = "Live WebView"
+                sub = "Native & Web"
             )
             StudioStatDivider()
             StudioStatItem(

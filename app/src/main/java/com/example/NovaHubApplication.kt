@@ -24,6 +24,9 @@ class NovaHubApplication : Application() {
             if (!cacheDir.exists()) {
                 cacheDir.mkdirs()
             }
+            if (!codeCacheDir.exists()) {
+                codeCacheDir.mkdirs()
+            }
             // Clean up any stale or corrupted WebView cache trees before WebView initializes
             cacheDir.listFiles()?.forEach { entry ->
                 if (entry.name.startsWith("WebView")) {

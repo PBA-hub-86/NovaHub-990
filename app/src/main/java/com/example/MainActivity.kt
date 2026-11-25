@@ -31,27 +31,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ui.ActiveNativeGame
 import com.example.ui.SearchResultItem
 import com.example.ui.StudioViewModel
 import com.example.ui.components.AboutSection
 import com.example.ui.components.AuthDialog
 import com.example.ui.components.ComposeWritingDialog
 import com.example.ui.components.ContactSection
+import com.example.ui.components.CyberBrickBreakerGame
+import com.example.ui.components.FirestoreImageGalleryComponent
 import com.example.ui.components.GamePortalComponent
-import com.example.ui.components.GamesSection
 import com.example.ui.components.HeroSection
 import com.example.ui.components.MasonryStillsGalleryComponent
 import com.example.ui.components.PlatformSettingsDialog
+import com.example.ui.components.ProfileSection
 import com.example.ui.components.PublishGameDialog
+import com.example.ui.components.Quantum2048Game
+import com.example.ui.components.RemoteGalleryUiState
 import com.example.ui.components.SearchDialog
 import com.example.ui.components.SiteFooter
 import com.example.ui.components.SiteHeader
 import com.example.ui.components.SocialChatDialog
 import com.example.ui.components.SocialHubSection
 import com.example.ui.components.StillLightboxDialog
-import com.example.ui.components.StillsSection
 import com.example.ui.components.UserCreationDetailDialog
-import com.example.ui.components.UserCreationsGallerySection
 import com.example.ui.components.VoiceCallDialog
 import com.example.ui.components.VoidRunnerGame
 import com.example.ui.components.WebGameViewerDialog
@@ -71,7 +74,8 @@ class MainActivity : ComponentActivity() {
         com.example.util.configureAppCheck(this, intent)
         enableEdgeToEdge()
         setContent {
-            NovaHubTheme {
+            val platformSettings by viewModel.platformSettings.collectAsStateWithLifecycle()
+            NovaHubTheme(accentTheme = platformSettings.accentTheme) {
                 StudioApp(viewModel = viewModel)
             }
         }
@@ -85,8 +89,16 @@ fun StudioApp(viewModel: StudioViewModel) {
     val listState = rememberLazyListState()
 
     val currentSection by viewModel.currentSection.collectAsStateWithLifecycle()
-    val isGameActive by viewModel.isGameActive.collectAsStateWithLifecycle()
+    val activeNativeGame by viewModel.activeNativeGame.collectAsStateWithLifecycle()
     val highScore by viewModel.voidRunnerHighScore.collectAsStateWithLifecycle()
+    val cyberBreakerHighScore by viewModel.cyberBreakerHighScore.collectAsStateWithLifecycle()
+    val quantum2048HighScore by viewModel.quantum2048HighScore.collectAsStateWithLifecycle()
+    val totalArcadeScore by viewModel.totalArcadeScore.collectAsStateWithLifecycle()
+    val firebaseUid by viewModel.firebaseUid.collectAsStateWithLifecycle()
+    val remoteGalleryState by viewModel.remoteGalleryState.collectAsStateWithLifecycle()
+    val remoteGalleryActionMessage by viewModel.remoteGalleryActionMessage.collectAsStateWithLifecycle()
+    val arcadeLeaderboard by viewModel.arcadeLeaderboard.collectAsStateWithLifecycle()
+    val activeUserProfile by viewModel.activeUserProfile.collectAsStateWithLifecycle()
     val activeLightboxStill by viewModel.activeLightboxStill.collectAsStateWithLifecycle()
     val selectedStillCat by viewModel.selectedStillCategory.collectAsStateWithLifecycle()
     val favoriteStillIds by viewModel.favoriteStillIds.collectAsStateWithLifecycle()
@@ -145,10 +157,12 @@ fun StudioApp(viewModel: StudioViewModel) {
                 "hero" -> 0
                 "social" -> 1
                 "portal", "games" -> 2
-                "masonry", "stills", "creations" -> 3
-                "writing" -> 4
-                "contact" -> 5
-                "about" -> 6
+                "cloud_gallery" -> 3
+                "masonry", "stills", "creations" -> 4
+                "writing" -> 5
+                "profile" -> 6
+                "contact" -> 7
+                "about" -> 8
                 else -> 0
             }
             listState.animateScrollToItem(targetIndex)
@@ -161,96 +175,120 @@ fun StudioApp(viewModel: StudioViewModel) {
             .background(StudioDarkBg)
     ) {
         AnimatedContent(
-            targetState = isGameActive,
+            targetState = activeNativeGame,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "game_view_transition"
-        ) { gameMode ->
-            if (gameMode) {
-                VoidRunnerGame(
-                    highScore = highScore,
-                    onScoreSaved = { score, shards ->
-                        viewModel.recordGameScore(score, shards)
-                    },
-                    onCloseGame = {
-                        viewModel.setGameActive(false)
-                    }
-                )
-            } else {
-                Scaffold(
-                    topBar = {
-                        SiteHeader(
-                            activeSection = currentSection,
-                            currentUser = authUiState.currentUser,
-                            onNavigate = { route -> scrollToSection(route) },
-                            onQuickPlay = { viewModel.setGameActive(true) },
-                            onOpenAuth = { viewModel.openAuthDialog() },
-                            onOpenSearch = { viewModel.openSearch() },
-                            onOpenChat = { viewModel.openChatDialog() },
-                            onOpenSettings = { viewModel.openSettingsDialog() },
-                            searchQuery = studioSearchQuery,
-                            onSearchQueryChange = { viewModel.setStudioSearchQuery(it) },
-                            matchingCreationsCount = filteredCreations.size,
-                            matchingWritingsCount = writings.size,
-                            onNavigateToGallery = { scrollToSection("masonry") },
-                            onNavigateToWriting = { scrollToSection("writing") }
-                        )
-                    },
-                    containerColor = StudioDarkBg
-                ) { innerPadding ->
-                    val firstVisibleItemIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
-                    val firstVisibleItemScrollOffset by remember { derivedStateOf { listState.firstVisibleItemScrollOffset } }
-
-                    // Scroll-triggered dynamic reveals for Games (index 2), Stills (index 3), About (index 6)
-                    val gamesIsScrolledIn = firstVisibleItemIndex >= 1 || (firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset > 250)
-                    val gamesAnimProgress by animateFloatAsState(
-                        targetValue = if (gamesIsScrolledIn) 1f else 0.94f,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-                        label = "games_scroll_anim"
-                    )
-                    val gamesAlpha by animateFloatAsState(
-                        targetValue = if (gamesIsScrolledIn) 1f else 0.7f,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-                        label = "games_scroll_alpha"
-                    )
-
-                    val stillsIsScrolledIn = firstVisibleItemIndex >= 2 || (firstVisibleItemIndex == 1 && firstVisibleItemScrollOffset > 250)
-                    val stillsAnimProgress by animateFloatAsState(
-                        targetValue = if (stillsIsScrolledIn) 1f else 0.94f,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-                        label = "stills_scroll_anim"
-                    )
-                    val stillsAlpha by animateFloatAsState(
-                        targetValue = if (stillsIsScrolledIn) 1f else 0.7f,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-                        label = "stills_scroll_alpha"
-                    )
-
-                    val aboutIsScrolledIn = firstVisibleItemIndex >= 4 || (firstVisibleItemIndex == 3 && firstVisibleItemScrollOffset > 250)
-                    val aboutAnimProgress by animateFloatAsState(
-                        targetValue = if (aboutIsScrolledIn) 1f else 0.94f,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-                        label = "about_scroll_anim"
-                    )
-                    val aboutAlpha by animateFloatAsState(
-                        targetValue = if (aboutIsScrolledIn) 1f else 0.7f,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-                        label = "about_scroll_alpha"
-                    )
-
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        item(key = "hero") {
-                            HeroSection(
-                                onPlayGame = { viewModel.setGameActive(true) },
-                                onExploreStills = { scrollToSection("masonry") },
-                                onWriteIn = { scrollToSection("contact") },
-                                onOpenSocial = { scrollToSection("social") }
-                            )
+        ) { nativeGame ->
+            when (nativeGame) {
+                ActiveNativeGame.VOID_RUNNER -> {
+                    VoidRunnerGame(
+                        highScore = highScore,
+                        onScoreSaved = { score, shards ->
+                            viewModel.recordNativeGameScore("void_runner", "Void Runner", score, shards)
+                        },
+                        onCloseGame = {
+                            viewModel.launchNativeGame(ActiveNativeGame.NONE)
                         }
+                    )
+                }
+                ActiveNativeGame.CYBER_BREAKER -> {
+                    CyberBrickBreakerGame(
+                        highScore = cyberBreakerHighScore,
+                        onScoreSaved = { score, bricksBroken ->
+                            viewModel.recordNativeGameScore("cyber_breaker", "Cyber Brick Breaker", score, bricksBroken)
+                        },
+                        onCloseGame = {
+                            viewModel.launchNativeGame(ActiveNativeGame.NONE)
+                        }
+                    )
+                }
+                ActiveNativeGame.QUANTUM_2048 -> {
+                    Quantum2048Game(
+                        highScore = quantum2048HighScore,
+                        onScoreSaved = { score, maxTile ->
+                            viewModel.recordNativeGameScore("quantum_2048", "Quantum 2048", score, maxTile)
+                        },
+                        onCloseGame = {
+                            viewModel.launchNativeGame(ActiveNativeGame.NONE)
+                        }
+                    )
+                }
+                ActiveNativeGame.NONE -> {
+                    Scaffold(
+                        topBar = {
+                            SiteHeader(
+                                activeSection = currentSection,
+                                currentUser = authUiState.currentUser,
+                                onNavigate = { route -> scrollToSection(route) },
+                                onQuickPlay = { viewModel.launchNativeGame(ActiveNativeGame.VOID_RUNNER) },
+                                onOpenAuth = { viewModel.openAuthDialog() },
+                                onOpenSearch = { viewModel.openSearch() },
+                                onOpenChat = { viewModel.openChatDialog() },
+                                onOpenSettings = { viewModel.openSettingsDialog() },
+                                searchQuery = studioSearchQuery,
+                                onSearchQueryChange = { viewModel.setStudioSearchQuery(it) },
+                                matchingCreationsCount = filteredCreations.size,
+                                matchingWritingsCount = writings.size,
+                                onNavigateToGallery = { scrollToSection("masonry") },
+                                onNavigateToWriting = { scrollToSection("writing") }
+                            )
+                        },
+                        containerColor = StudioDarkBg
+                    ) { innerPadding ->
+                        val firstVisibleItemIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+                        val firstVisibleItemScrollOffset by remember { derivedStateOf { listState.firstVisibleItemScrollOffset } }
+
+                        // Scroll-triggered dynamic reveals for Portal (2), Stills (4), About (8)
+                        val gamesIsScrolledIn = firstVisibleItemIndex >= 1 || (firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset > 250)
+                        val gamesAnimProgress by animateFloatAsState(
+                            targetValue = if (gamesIsScrolledIn) 1f else 0.94f,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            label = "games_scroll_anim"
+                        )
+                        val gamesAlpha by animateFloatAsState(
+                            targetValue = if (gamesIsScrolledIn) 1f else 0.7f,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            label = "games_scroll_alpha"
+                        )
+
+                        val stillsIsScrolledIn = firstVisibleItemIndex >= 3 || (firstVisibleItemIndex == 2 && firstVisibleItemScrollOffset > 250)
+                        val stillsAnimProgress by animateFloatAsState(
+                            targetValue = if (stillsIsScrolledIn) 1f else 0.94f,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            label = "stills_scroll_anim"
+                        )
+                        val stillsAlpha by animateFloatAsState(
+                            targetValue = if (stillsIsScrolledIn) 1f else 0.7f,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            label = "stills_scroll_alpha"
+                        )
+
+                        val aboutIsScrolledIn = firstVisibleItemIndex >= 7 || (firstVisibleItemIndex == 6 && firstVisibleItemScrollOffset > 250)
+                        val aboutAnimProgress by animateFloatAsState(
+                            targetValue = if (aboutIsScrolledIn) 1f else 0.94f,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            label = "about_scroll_anim"
+                        )
+                        val aboutAlpha by animateFloatAsState(
+                            targetValue = if (aboutIsScrolledIn) 1f else 0.7f,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            label = "about_scroll_alpha"
+                        )
+
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
+                            item(key = "hero") {
+                                HeroSection(
+                                    onPlayGame = { viewModel.launchNativeGame(ActiveNativeGame.VOID_RUNNER) },
+                                    onExploreStills = { scrollToSection("cloud_gallery") },
+                                    onWriteIn = { scrollToSection("contact") },
+                                    onOpenSocial = { scrollToSection("social") }
+                                )
+                            }
 
                         item(key = "social") {
                             SocialHubSection(
@@ -281,12 +319,32 @@ fun StudioApp(viewModel: StudioViewModel) {
                             ) {
                                 GamePortalComponent(
                                     games = viewModel.games,
-                                    highScore = highScore,
-                                    onLaunchGame = { viewModel.setGameActive(true) },
+                                    voidRunnerHighScore = highScore,
+                                    cyberBreakerHighScore = cyberBreakerHighScore,
+                                    quantum2048HighScore = quantum2048HighScore,
+                                    soundEffectsEnabled = platformSettings.soundEffectsEnabled,
+                                    onToggleSoundEffects = { viewModel.toggleSoundEffects() },
+                                    onLaunchNativeGame = { game -> viewModel.launchNativeGame(game) },
                                     onLaunchWebGame = { game -> viewModel.launchWebGame(game) },
                                     onOpenPublishGameDialog = { viewModel.openPublishGameDialog() }
                                 )
                             }
+                        }
+
+                        item(key = "cloud_gallery") {
+                            FirestoreImageGalleryComponent(
+                                uiState = remoteGalleryState,
+                                isFirebaseSignedIn = firebaseUid != null,
+                                currentFirebaseUid = firebaseUid,
+                                actionMessage = remoteGalleryActionMessage,
+                                onOpenAuth = { viewModel.openAuthDialog() },
+                                onAddRemoteImage = { title, url, cat, desc, vis ->
+                                    viewModel.addRemoteGalleryImage(title, url, cat, desc, vis)
+                                },
+                                onLikeImage = { img -> viewModel.likeRemoteGalleryImage(img) },
+                                onDeleteImage = { id -> viewModel.deleteRemoteGalleryImage(id) },
+                                onDismissMessage = { viewModel.clearRemoteGalleryActionMessage() }
+                            )
                         }
 
                         item(key = "masonry") {
@@ -326,6 +384,36 @@ fun StudioApp(viewModel: StudioViewModel) {
                                 onNoteTextChange = { viewModel.updateNoteText(it) },
                                 onSaveNote = { viewModel.saveNote() },
                                 noteSaveSuccess = noteSaveSuccess
+                            )
+                        }
+
+                        item(key = "profile") {
+                            val remoteImagesCount = (remoteGalleryState as? RemoteGalleryUiState.Success)?.images?.size ?: 0
+                            ProfileSection(
+                                user = activeUserProfile,
+                                isFirebaseSignedIn = firebaseUid != null,
+                                voidRunnerBest = highScore,
+                                cyberBreakerBest = cyberBreakerHighScore,
+                                quantum2048Best = quantum2048HighScore,
+                                totalArcadeScore = totalArcadeScore,
+                                socialPostsCount = socialPosts.size,
+                                writingsCount = writings.size,
+                                remoteImagesCount = remoteImagesCount,
+                                activeAccentTheme = platformSettings.accentTheme,
+                                leaderboardScores = arcadeLeaderboard,
+                                onSelectAccentTheme = { theme -> viewModel.setAccentTheme(theme) },
+                                onSaveProfile = { displayName, handle, roleTitle, bio, initials, avatarUrl, accentTheme ->
+                                    viewModel.saveUserProfile(
+                                        displayName = displayName,
+                                        handle = handle,
+                                        roleTitle = roleTitle,
+                                        bio = bio,
+                                        initials = initials,
+                                        avatarUrl = avatarUrl,
+                                        accentTheme = accentTheme
+                                    )
+                                },
+                                onOpenAuth = { viewModel.openAuthDialog() }
                             )
                         }
 
@@ -380,6 +468,7 @@ fun StudioApp(viewModel: StudioViewModel) {
                     }
                 }
             }
+        }
         }
 
         // Lightbox dialog for viewing still photo in full detail
@@ -526,6 +615,8 @@ fun StudioApp(viewModel: StudioViewModel) {
                 onToggleAutoPlay = { viewModel.toggleAutoPlayMedia() },
                 onToggleAllowCalls = { viewModel.toggleAllowCalls() },
                 onToggleAllowGameUploads = { viewModel.toggleAllowGameUploads() },
+                onToggleSoundEffects = { viewModel.toggleSoundEffects() },
+                onSelectAccentTheme = { theme -> viewModel.setAccentTheme(theme) },
                 onDismiss = { viewModel.closeSettings() }
             )
         }

@@ -220,7 +220,7 @@ fun MasonryStillsGalleryComponent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "02 / MASONRY STILLS & DARKROOM ARCHIVE",
+                    text = "04 / MASONRY STILLS & DARKROOM ARCHIVE",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = StudioGold,
@@ -824,10 +824,19 @@ private fun AddPersonalStillDialog(
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val context = LocalContext.current
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
-        selectedUri = uri
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+            selectedUri = uri
+        }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -870,7 +879,13 @@ private fun AddPersonalStillDialog(
                         .clip(RoundedCornerShape(10.dp))
                         .background(StudioSurface)
                         .border(1.dp, StudioCardBorder, RoundedCornerShape(10.dp))
-                        .clickable { photoPickerLauncher.launch("image/*") },
+                        .clickable {
+                            photoPickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     if (selectedUri != null) {

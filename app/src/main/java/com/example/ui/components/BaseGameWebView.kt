@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
@@ -78,7 +79,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.BuildConfig
 import com.example.ui.theme.StudioCardBorder
 import com.example.ui.theme.StudioCyan
 import com.example.ui.theme.StudioDarkBg
@@ -92,6 +92,26 @@ import com.example.ui.theme.StudioTextPrimary
 import com.example.ui.theme.StudioTextSecondary
 
 private const val WEBVIEW_TAG = "BaseGameWebView"
+
+private fun isRunningOnEmulator(): Boolean {
+    val fingerprint = Build.FINGERPRINT.lowercase()
+    val model = Build.MODEL.lowercase()
+    val hardware = Build.HARDWARE.lowercase()
+    val product = Build.PRODUCT.lowercase()
+    val brand = Build.BRAND.lowercase()
+    val device = Build.DEVICE.lowercase()
+    return fingerprint.contains("generic") ||
+        fingerprint.contains("emulator") ||
+        fingerprint.contains("sdk_gphone") ||
+        model.contains("emulator") ||
+        model.contains("android sdk built for") ||
+        model.contains("gphone") ||
+        hardware.contains("goldfish") ||
+        hardware.contains("ranchu") ||
+        product.contains("sdk") ||
+        product.contains("emulator") ||
+        (brand.startsWith("generic") && device.startsWith("generic"))
+}
 
 /**
  * Base Game WebView Component
@@ -110,6 +130,7 @@ fun BaseGameWebView(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val isEmulator = remember { isRunningOnEmulator() }
 
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var pageLoadingProgress by remember { mutableFloatStateOf(0.1f) }
@@ -117,6 +138,7 @@ fun BaseGameWebView(
     var loadError by remember { mutableStateOf<String?>(null) }
     var isImmersiveFullscreen by remember { mutableStateOf(false) }
     var reloadNonce by remember { mutableIntStateOf(0) }
+    var forceSoftwareLayer by remember { mutableStateOf(isEmulator) }
 
     // Pause/resume WebGL & audio cleanly with lifecycle (destruction is handled by AndroidView.onRelease)
     DisposableEffect(lifecycleOwner) {
@@ -259,7 +281,7 @@ fun BaseGameWebView(
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "কোনো ব্রাউজার পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "No external browser found", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             modifier = Modifier
@@ -284,8 +306,8 @@ fun BaseGameWebView(
                     .fillMaxWidth()
                     .background(Color(0xFF040507))
             ) {
-                key(gameUrl, reloadNonce) {
-                    val destroyedFlag = remember(gameUrl, reloadNonce) { AtomicBoolean(false) }
+                key(gameUrl, reloadNonce, forceSoftwareLayer) {
+                    val destroyedFlag = remember(gameUrl, reloadNonce, forceSoftwareLayer) { AtomicBoolean(false) }
 
                     fun destroySafely(wv: WebView?) {
                         if (wv == null) return
@@ -295,6 +317,7 @@ fun BaseGameWebView(
                         }
                         try {
                             wv.stopLoading()
+                            wv.loadUrl("about:blank")
                             wv.onPause()
                             (wv.parent as? ViewGroup)?.removeView(wv)
                             wv.clearHistory()
@@ -307,15 +330,9 @@ fun BaseGameWebView(
 
                     AndroidView(
                         factory = { ctx ->
-                            if (BuildConfig.DEBUG) {
-                                try {
-                                    WebView.setWebContentsDebuggingEnabled(true)
-                                } catch (_: Throwable) {}
-                            }
                             try {
-                                if (!ctx.cacheDir.exists()) {
-                                    ctx.cacheDir.mkdirs()
-                                }
+                                if (!ctx.cacheDir.exists()) ctx.cacheDir.mkdirs()
+                                if (!ctx.codeCacheDir.exists()) ctx.codeCacheDir.mkdirs()
                             } catch (_: Throwable) {}
 
                             val container = FrameLayout(ctx).apply {
@@ -330,9 +347,12 @@ fun BaseGameWebView(
                                     ViewGroup.LayoutParams.MATCH_PARENT,
                                     ViewGroup.LayoutParams.MATCH_PARENT
                                 )
-                                // Keep default LAYER_TYPE_NONE to avoid extra FBO GPU crashes on emulators
+                                // Use software compositing on emulators or after renderer recovery to prevent GPU surface crashes
+                                if (forceSoftwareLayer) {
+                                    setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                                }
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
+                                    setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
                                 }
                                 settings.apply {
                                     javaScriptEnabled = true
@@ -340,7 +360,7 @@ fun BaseGameWebView(
                                     databaseEnabled = true
                                     loadWithOverviewMode = true
                                     useWideViewPort = true
-                                    cacheMode = WebSettings.LOAD_DEFAULT
+                                    cacheMode = if (isEmulator) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
                                     allowFileAccess = false
                                     allowContentAccess = false
                                     @Suppress("DEPRECATION")
@@ -354,7 +374,7 @@ fun BaseGameWebView(
                                     builtInZoomControls = false
                                     displayZoomControls = false
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                        safeBrowsingEnabled = true
+                                        safeBrowsingEnabled = !isEmulator
                                     }
                                 }
 
@@ -384,7 +404,7 @@ fun BaseGameWebView(
                                     ) {
                                         if (request?.isForMainFrame == true) {
                                             isPageLoading = false
-                                            loadError = "গেম লোড হতে পারেনি। ইন্টারনেট সংযোগ বা লিংক পরীক্ষা করুন।"
+                                            loadError = "Unable to load game. Please check your internet connection or URL."
                                         }
                                     }
 
@@ -392,10 +412,18 @@ fun BaseGameWebView(
                                         view: WebView?,
                                         detail: RenderProcessGoneDetail?
                                     ): Boolean {
-                                        Log.e(WEBVIEW_TAG, "WebView renderer process gone (didCrash=${detail?.didCrash()})")
+                                        Log.w(WEBVIEW_TAG, "WebView renderer process gone (didCrash=${detail?.didCrash()})")
                                         destroySafely(view)
-                                        isPageLoading = false
-                                        loadError = "ব্রাউজার রেন্ডারার রিস্টার্ট প্রয়োজন। নিচের বাটনে চাপ দিয়ে আবার চালু করুন।"
+                                        if (!forceSoftwareLayer) {
+                                            forceSoftwareLayer = true
+                                            isPageLoading = true
+                                            pageLoadingProgress = 0.1f
+                                            loadError = null
+                                            reloadNonce++
+                                        } else {
+                                            isPageLoading = false
+                                            loadError = "Browser renderer needs a quick restart. Tap Retry below to resume."
+                                        }
                                         return true
                                     }
 
@@ -489,7 +517,7 @@ fun BaseGameWebView(
                             )
                             Spacer(modifier = Modifier.height(14.dp))
                             Text(
-                                text = "HTML5 গেম ইঞ্জিন চালু হচ্ছে...",
+                                text = "Launching HTML5 game engine...",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = StudioTextPrimary
@@ -531,7 +559,7 @@ fun BaseGameWebView(
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "গেম লোড করা যায়নি",
+                                text = "Could Not Load Game",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = StudioTextPrimary
@@ -555,14 +583,14 @@ fun BaseGameWebView(
                                     colors = ButtonDefaults.buttonColors(containerColor = StudioGold),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text("আবার চেষ্টা করুন (Retry)", color = Color(0xFF08090C), fontWeight = FontWeight.Bold)
+                                    Text("Retry", color = Color(0xFF08090C), fontWeight = FontWeight.Bold)
                                 }
                                 Button(
                                     onClick = onClose,
                                     colors = ButtonDefaults.buttonColors(containerColor = StudioSurfaceElevated),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text("বন্ধ করুন", color = StudioTextPrimary)
+                                    Text("Close", color = StudioTextPrimary)
                                 }
                             }
                         }

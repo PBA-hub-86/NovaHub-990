@@ -75,6 +75,9 @@ data class StudioUser(
     val roleTitle: String = "Creator",
     val bio: String = "NovaHub Creator & Explorer",
     val avatarInitials: String = "NH",
+    val handle: String = "@novahub",
+    val avatarUrl: String = "",
+    val accentTheme: String = "GOLD",
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -155,7 +158,8 @@ data class PlatformSettings(
     val allowDirectCalls: Boolean = true,
     val allowPublicGameUploads: Boolean = true,
     val soundEffectsEnabled: Boolean = true,
-    val notificationsEnabled: Boolean = true
+    val notificationsEnabled: Boolean = true,
+    val accentTheme: String = "GOLD"
 )
 
 @Entity(tableName = "write_in_drafts")

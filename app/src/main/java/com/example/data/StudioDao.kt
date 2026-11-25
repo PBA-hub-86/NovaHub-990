@@ -26,6 +26,9 @@ interface StudioDao {
     @Query("SELECT MAX(score) FROM game_scores WHERE gameId = :gameId")
     fun getHighestScore(gameId: String): Flow<Int?>
 
+    @Query("SELECT SUM(score) FROM game_scores")
+    fun getTotalArcadeScore(): Flow<Int?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGameScore(score: GameScoreRecord): Long
 
@@ -68,11 +71,20 @@ interface StudioDao {
     @Query("SELECT * FROM studio_users WHERE id = :id LIMIT 1")
     suspend fun getUserById(id: Long): StudioUser?
 
+    @Query("SELECT * FROM studio_users ORDER BY id ASC LIMIT 1")
+    fun observePrimaryUser(): Flow<StudioUser?>
+
+    @Query("SELECT * FROM studio_users ORDER BY id ASC LIMIT 1")
+    suspend fun getPrimaryUser(): StudioUser?
+
     @Query("SELECT * FROM studio_users ORDER BY createdAt DESC")
     fun getAllUsers(): Flow<List<StudioUser>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: StudioUser): Long
+
+    @Update
+    suspend fun updateUser(user: StudioUser)
 
     @Query("DELETE FROM studio_users WHERE id = :id")
     suspend fun deleteUserById(id: Long)

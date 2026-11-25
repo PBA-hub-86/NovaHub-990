@@ -179,7 +179,7 @@ fun PublishGameDialog(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "নতুন গেম বা ওয়েব অ্যাপ যুক্ত করুন",
+                                    text = "Publish Game or Web App",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = StudioTextPrimary
@@ -209,7 +209,7 @@ fun PublishGameDialog(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "এখানে আপনি আপনার তৈরি করা যেকোনো HTML5 গেম বা ওয়েব অ্যাপ্লিকেশনের লিংক (যেমন itch.io, Vercel, Netlify, GitHub Pages ইত্যাদি) দিয়ে সরাসরি এই অ্যাপের মধ্যে যুক্ত করতে পারেন। রিফ্রেশ করলেও এটি সংরক্ষিত থাকবে এবং ব্যবহারকারীরা অ্যাপ থেকেই তা সরাসরি চালাতে পারবেন।",
+                        text = "Submit any HTML5 browser game or web app URL (itch.io, Vercel, Netlify, GitHub Pages, or Cloudflare Workers) to play directly inside NovaHub.",
                         fontSize = 12.sp,
                         color = StudioTextSecondary,
                         lineHeight = 18.sp
@@ -219,7 +219,7 @@ fun PublishGameDialog(
 
                     // Cover image picker
                     Text(
-                        text = "গেম কভার আর্টওয়ার্ক (Cover Image)",
+                        text = "Game Cover Artwork",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = StudioTextPrimary
@@ -275,13 +275,13 @@ fun PublishGameDialog(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "গ্যালারি থেকে কভার ছবি যোগ করুন",
+                                    text = "Pick Cover Image from Gallery",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = StudioTextPrimary
                                 )
                                 Text(
-                                    text = "Tap to pick photo from device",
+                                    text = "Tap to select photo from device",
                                     fontSize = 10.sp,
                                     color = StudioTextMuted
                                 )
@@ -301,7 +301,7 @@ fun PublishGameDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "গেম বা অ্যাপের বিবরণ (Details)",
+                            text = "Game / App Details",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = StudioTextPrimary
@@ -349,7 +349,7 @@ fun PublishGameDialog(
                                 }
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isAiGenerating) "Gemini ভাবছে..." else "✨ Gemini AI আইডিয়া",
+                                    text = if (isAiGenerating) "Gemini thinking..." else "Gemini Idea Assist",
                                     fontSize = 10.sp,
                                     color = StudioGold,
                                     fontWeight = FontWeight.Bold
@@ -364,7 +364,7 @@ fun PublishGameDialog(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("গেমের নাম (Game Title)") },
+                        label = { Text("Game Title") },
                         placeholder = { Text("e.g., Cyber Neon Matrix") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -382,7 +382,7 @@ fun PublishGameDialog(
                     OutlinedTextField(
                         value = subtitle,
                         onValueChange = { subtitle = it },
-                        label = { Text("সাবটাইটেল বা ধরন (Genre / Subtitle)") },
+                        label = { Text("Genre / Subtitle") },
                         placeholder = { Text("e.g., 2D Kinetic Dodger / Arcade") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -403,7 +403,7 @@ fun PublishGameDialog(
                             webGameUrl = it
                             validationError = null
                         },
-                        label = { Text("গেমের ওয়েব লিংক (Web Playable URL)") },
+                        label = { Text("Web Playable URL") },
                         placeholder = { Text("https://mygame.itch.io/game or https://...") },
                         leadingIcon = {
                             Icon(
@@ -425,7 +425,7 @@ fun PublishGameDialog(
                     // Presets chips
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "দ্রুত ডেমো লিংক ব্যবহার করুন (Quick Templates):",
+                        text = "Quick Demo Templates:",
                         fontSize = 11.sp,
                         color = StudioTextMuted
                     )
@@ -462,7 +462,7 @@ fun PublishGameDialog(
                     OutlinedTextField(
                         value = techStack,
                         onValueChange = { techStack = it },
-                        label = { Text("টেক স্ট্যাক (Tech Stack - comma separated)") },
+                        label = { Text("Tech Stack (comma separated)") },
                         placeholder = { Text("HTML5 Canvas, WebGL, Phaser, Audio API") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -480,7 +480,7 @@ fun PublishGameDialog(
                     OutlinedTextField(
                         value = authorName,
                         onValueChange = { authorName = it },
-                        label = { Text("নির্মাতার নাম (Creator Name)") },
+                        label = { Text("Creator Name") },
                         placeholder = { Text("e.g. Nova Creator") },
                         leadingIcon = {
                             Icon(
@@ -505,8 +505,8 @@ fun PublishGameDialog(
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = { Text("গেমের বিবরণ ও নিয়ম (Gameplay Description)") },
-                        placeholder = { Text("কীভাবে গেমটি খেলতে হবে বা কী বিষয়ে...") },
+                        label = { Text("Gameplay Description") },
+                        placeholder = { Text("How to play, controls, or key features...") },
                         maxLines = 3,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = StudioGold,
@@ -533,7 +533,7 @@ fun PublishGameDialog(
                     Button(
                         onClick = {
                             if (title.isBlank()) {
-                                validationError = "দয়া করে গেমের নাম লিখুন"
+                                validationError = "Please enter a game title"
                                 return@Button
                             }
                             val formattedUrl = if (webGameUrl.startsWith("http://") || webGameUrl.startsWith("https://")) {
@@ -543,7 +543,7 @@ fun PublishGameDialog(
                             }
 
                             if (formattedUrl.isBlank() || !formattedUrl.contains(".")) {
-                                validationError = "সঠিক ওয়েবসাইট বা গেম লিংক দিন (যেমন: https://play2048.co)"
+                                validationError = "Please enter a valid web URL (e.g. https://play2048.co)"
                                 return@Button
                             }
 
@@ -574,7 +574,7 @@ fun PublishGameDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "পাবলিশ করুন (Publish to Studio)",
+                            text = "Publish to Game Portal",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )

@@ -140,13 +140,13 @@ fun UploadMediaDialog(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "ছবি বা ভিডিও আপলোড করুন",
+                                    text = "Upload Photo or Video",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = StudioTextPrimary
                                 )
                                 Text(
-                                    text = "Upload to Creations Gallery",
+                                    text = "Save directly to Creations Gallery",
                                     fontSize = 11.sp,
                                     color = StudioGold,
                                     letterSpacing = 0.5.sp
@@ -170,7 +170,7 @@ fun UploadMediaDialog(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "আপনার ফোনের গ্যালারি থেকে যেকোনো ছবি বা ভিডিও ক্রিয়েশনস গ্যালারিতে সরাসরি আপলোড করে সংরক্ষণ ও দেখতে পারবেন।",
+                        text = "Choose any photo or video from your device using Android Photo Picker and archive it in your NovaHub Gallery.",
                         fontSize = 12.sp,
                         color = StudioTextSecondary,
                         lineHeight = 18.sp
@@ -207,7 +207,7 @@ fun UploadMediaDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "ছবি (Photo)",
+                                    text = "Photo",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isImage) StudioDarkBg else StudioTextSecondary
@@ -239,7 +239,7 @@ fun UploadMediaDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "ভিডিও (Video)",
+                                    text = "Video",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isVideo) StudioDarkBg else StudioTextSecondary
@@ -290,7 +290,7 @@ fun UploadMediaDialog(
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "ভিডিও ফাইল সিলেক্ট হয়েছে ✓",
+                                        text = "Video File Selected",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = StudioCyan
@@ -328,7 +328,7 @@ fun UploadMediaDialog(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = if (selectedMediaType == "IMAGE") "ডিভাইস থেকে ছবি নির্বাচন করুন" else "ডিভাইস থেকে ভিডিও নির্বাচন করুন",
+                                    text = if (selectedMediaType == "IMAGE") "Choose Photo from Device" else "Choose Video from Device",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = StudioTextPrimary
@@ -348,7 +348,7 @@ fun UploadMediaDialog(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("শিরোনাম (Title)") },
+                        label = { Text("Title") },
                         placeholder = { Text("e.g. My Cinematic Capture") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -366,7 +366,7 @@ fun UploadMediaDialog(
                     OutlinedTextField(
                         value = noteOrPrompt,
                         onValueChange = { noteOrPrompt = it },
-                        label = { Text("বিবরণ বা প্রম্পট (Prompt / Description)") },
+                        label = { Text("Description / Notes") },
                         placeholder = { Text("e.g. Beautiful portrait, 85mm f/1.4 lens or scene description...") },
                         maxLines = 3,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -383,7 +383,7 @@ fun UploadMediaDialog(
                         OutlinedTextField(
                             value = videoDuration,
                             onValueChange = { videoDuration = it },
-                            label = { Text("ভিডিওর সময়কাল (Duration)") },
+                            label = { Text("Video Duration") },
                             placeholder = { Text("e.g. 0:15 or 0:30") },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -412,11 +412,11 @@ fun UploadMediaDialog(
                     Button(
                         onClick = {
                             if (title.isBlank()) {
-                                validationError = "দয়া করে একটি শিরোনাম লিখুন"
+                                validationError = "Please enter a title"
                                 return@Button
                             }
                             if (selectedMediaUri == null) {
-                                validationError = "দয়া করে ডিভাইস থেকে ছবি বা ভিডিও ফাইল সিলেক্ট করুন"
+                                validationError = "Please select a photo or video file"
                                 return@Button
                             }
 
@@ -446,7 +446,7 @@ fun UploadMediaDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "গ্যালারিতে যুক্ত করুন (Save to Gallery)",
+                            text = "Save to Gallery",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )

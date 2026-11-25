@@ -170,13 +170,13 @@ fun SocialHubSection(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Chat,
-                        contentDescription = "লাইভ চ্যাট",
+                        contentDescription = "Live Chat",
                         tint = StudioGold,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "লাইভ চ্যাট ও কল",
+                        text = "Live Chat & Call",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = StudioTextPrimary
@@ -188,13 +188,13 @@ fun SocialHubSection(
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "আধুনিক সোশ্যাল ফিড",
+            text = "Community Social Feed",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = StudioTextPrimary
         )
         Text(
-            text = "ছবি, ভিডিও এবং চিন্তা শেয়ার করুন। রিফ্রেশ করলেও আপনার আপলোড ডাটাবেজে স্থায়ী থাকবে।",
+            text = "Share updates, photos, and short clips with the community. Your posts persist safely across launches.",
             fontSize = 13.sp,
             color = StudioTextSecondary,
             modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -245,7 +245,7 @@ fun SocialHubSection(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "পাবলিক ফিড • পারসিস্টেন্ট স্টোরেজ",
+                                text = "Public Feed • Persistent Storage",
                                 fontSize = 10.sp,
                                 color = StudioEmerald
                             )
@@ -260,7 +260,7 @@ fun SocialHubSection(
                     onValueChange = onContentChange,
                     placeholder = {
                         Text(
-                            "নতুন কিছু শেয়ার করুন (ছবি বা ভিডিও যুক্ত করতে নিচের বাটনে চাপ দিন)...",
+                            "Share what you are playing or creating (attach a photo or video below)...",
                             fontSize = 13.sp,
                             color = StudioTextMuted
                         )
@@ -323,7 +323,7 @@ fun SocialHubSection(
                             color = StudioDarkBg.copy(alpha = 0.7f)
                         ) {
                             Text(
-                                text = if (newPostMediaType == "IMAGE") "📷 ছবি সংযুক্ত" else "🎬 ভিডিও সংযুক্ত",
+                                text = if (newPostMediaType == "IMAGE") "Photo Attached" else "Video Attached",
                                 fontSize = 10.sp,
                                 color = StudioGold,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -352,12 +352,12 @@ fun SocialHubSection(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AddPhotoAlternate,
-                                contentDescription = "ছবি যুক্ত করুন",
+                                contentDescription = "Add Photo",
                                 tint = StudioCyan,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("ছবি", fontSize = 11.sp, color = StudioTextPrimary)
+                            Text("Photo", fontSize = 11.sp, color = StudioTextPrimary)
                         }
 
                         OutlinedButton(
@@ -372,12 +372,12 @@ fun SocialHubSection(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Videocam,
-                                contentDescription = "ভিডিও যুক্ত করুন",
+                                contentDescription = "Add Video",
                                 tint = StudioEmerald,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("ভিডিও", fontSize = 11.sp, color = StudioTextPrimary)
+                            Text("Video", fontSize = 11.sp, color = StudioTextPrimary)
                         }
                     }
 
@@ -398,7 +398,7 @@ fun SocialHubSection(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "পোস্ট করুন",
+                            text = "Publish",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -468,7 +468,7 @@ fun SocialHubSection(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Flag,
-                                        contentDescription = "অপব্যবহার রিপোর্ট",
+                                        contentDescription = "Report Abuse",
                                         tint = StudioRose.copy(alpha = 0.7f),
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -480,7 +480,7 @@ fun SocialHubSection(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
-                                            contentDescription = "মুছে ফেলুন",
+                                            contentDescription = "Delete Post",
                                             tint = StudioTextMuted,
                                             modifier = Modifier.size(16.dp)
                                         )
@@ -584,7 +584,7 @@ fun SocialHubSection(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "${post.likesCount} লাইক",
+                                    text = "${post.likesCount} Likes",
                                     fontSize = 12.sp,
                                     color = if (post.isLikedByUser) StudioRose else StudioTextSecondary
                                 )
@@ -602,7 +602,7 @@ fun SocialHubSection(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "চ্যাট করুন",
+                                    text = "Live Chat",
                                     fontSize = 12.sp,
                                     color = StudioTextSecondary
                                 )
@@ -617,7 +617,7 @@ fun SocialHubSection(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "সুরক্ষিত",
+                                    text = "Protected",
                                     fontSize = 11.sp,
                                     color = StudioEmerald
                                 )

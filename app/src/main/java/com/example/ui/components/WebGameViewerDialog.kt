@@ -6,41 +6,33 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import com.example.data.StudioGame
 import com.example.ui.theme.StudioDarkBg
 
 /**
- * In-App Web Game Launcher Dialog
+ * In-App Web Game Launcher Overlay
  * Uses BaseGameWebView to host and execute browser-based HTML5 / WebGL games
- * within an isolated, fully controlled sandbox modal.
+ * directly inside the main Activity window for rock-solid WebView surface stability.
  */
 @Composable
 fun WebGameViewerDialog(
     game: StudioGame,
     onDismiss: () -> Unit
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(20f)
+            .background(StudioDarkBg)
+            .testTag("web_game_dialog_${game.id}"),
+        color = StudioDarkBg
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(StudioDarkBg)
-                .testTag("web_game_dialog_${game.id}"),
-            color = StudioDarkBg
-        ) {
-            BaseGameWebView(
-                gameUrl = game.webGameUrl,
-                gameTitle = game.title,
-                techStack = game.techStack,
-                onClose = onDismiss
-            )
-        }
+        BaseGameWebView(
+            gameUrl = game.webGameUrl,
+            gameTitle = game.title,
+            techStack = game.techStack,
+            onClose = onDismiss
+        )
     }
 }

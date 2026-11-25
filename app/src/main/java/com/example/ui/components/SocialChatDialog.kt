@@ -117,13 +117,13 @@ fun SocialChatDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "কমিউনিটি লাইভ চ্যাট",
+                                text = "Community Live Chat",
                                 fontWeight = FontWeight.Bold,
                                 color = StudioTextPrimary,
                                 fontSize = 16.sp
                             )
                             Text(
-                                text = "সরাসরি একে অপরের সাথে যোগাযোগ করুন",
+                                text = "Connect with creators and players in real time",
                                 color = StudioEmerald,
                                 fontSize = 12.sp
                             )
@@ -137,7 +137,7 @@ fun SocialChatDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Call,
-                                contentDescription = "ভয়েস কল",
+                                contentDescription = "Voice Call",
                                 tint = StudioGold
                             )
                         }
@@ -239,7 +239,7 @@ fun SocialChatDialog(
                     OutlinedTextField(
                         value = inputText,
                         onValueChange = onInputChange,
-                        placeholder = { Text("একটি বার্তা লিখুন...", color = StudioTextMuted, fontSize = 13.sp) },
+                        placeholder = { Text("Write a message...", color = StudioTextMuted, fontSize = 13.sp) },
                         modifier = Modifier
                             .weight(1f)
                             .testTag("chat_input_field"),
@@ -265,7 +265,7 @@ fun SocialChatDialog(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "পাঠান",
+                            contentDescription = "Send message",
                             tint = Color.Black
                         )
                     }
@@ -315,7 +315,7 @@ fun VoiceCallDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "লাইভ ভয়েস কল",
+                    text = "LIVE VOICE CALL",
                     color = StudioEmerald,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -401,6 +401,8 @@ fun PlatformSettingsDialog(
     onToggleAutoPlay: () -> Unit,
     onToggleAllowCalls: () -> Unit,
     onToggleAllowGameUploads: () -> Unit,
+    onToggleSoundEffects: () -> Unit = {},
+    onSelectAccentTheme: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     Dialog(
@@ -428,7 +430,7 @@ fun PlatformSettingsDialog(
                         Icon(Icons.Default.Settings, contentDescription = null, tint = StudioGold)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "প্ল্যাটফর্ম সেটিংস ও সুরক্ষা",
+                            text = "Platform Settings & Safety",
                             fontWeight = FontWeight.Bold,
                             color = StudioTextPrimary,
                             fontSize = 17.sp
@@ -439,35 +441,75 @@ fun PlatformSettingsDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 SettingsItem(
-                    title = "🛡️ অপব্যবহার ও স্প্যাম ফিল্টার",
-                    subtitle = "অশ্লীল, ক্ষতিকর বা স্প্যাম পোস্ট ও বার্তা স্বয়ংক্রিয়ভাবে ব্লক করে",
+                    title = "Abuse & Spam Shield",
+                    subtitle = "Automatically filters spam or harmful content in public posts",
                     checked = settings.safeContentFilter,
                     onCheckedChange = { onToggleSafeContent() }
                 )
 
                 SettingsItem(
-                    title = "📞 ডিরেক্ট কলিং সুবিধা",
-                    subtitle = "কমিউনিটি মেম্বারদের সাথে অডিও যোগাযোগ বজায় রাখা",
+                    title = "Arcade Sound Effects",
+                    subtitle = "Enable procedural sound synthesis for in-app games and rewards",
+                    checked = settings.soundEffectsEnabled,
+                    onCheckedChange = { onToggleSoundEffects() }
+                )
+
+                SettingsItem(
+                    title = "Direct Voice Calls",
+                    subtitle = "Allow live audio communication with community members",
                     checked = settings.allowDirectCalls,
                     onCheckedChange = { onToggleAllowCalls() }
                 )
 
                 SettingsItem(
-                    title = "🎮 উন্মুক্ত গেম আপলোড",
-                    subtitle = "ব্যবহারকারীরা নিজস্ব কোডেড গেম পাবলিশ করতে পারবে",
+                    title = "Open Game Publishing",
+                    subtitle = "Allow creators to submit HTML5 web games to the Portal",
                     checked = settings.allowPublicGameUploads,
                     onCheckedChange = { onToggleAllowGameUploads() }
                 )
 
                 SettingsItem(
-                    title = "🎬 স্বয়ংক্রিয় মিডিয়া প্রিভিউ",
-                    subtitle = "ছবি ও ভিডিও গ্যালারিতে সরাসরি অটোপ্লে প্রিভিউ",
+                    title = "Auto Media Preview",
+                    subtitle = "Automatically preview images & clips across galleries",
                     checked = settings.autoPlayMedia,
                     onCheckedChange = { onToggleAutoPlay() }
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Studio Accent Theme",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = StudioTextSecondary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("GOLD", "CYAN", "EMERALD").forEach { themeKey ->
+                        val swatch = when (themeKey) {
+                            "CYAN" -> StudioCyan
+                            "EMERALD" -> StudioEmerald
+                            else -> StudioGold
+                        }
+                        val selected = settings.accentTheme == themeKey
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (selected) swatch else StudioSurfaceElevated,
+                            border = BorderStroke(1.dp, swatch),
+                            modifier = Modifier.clickable { onSelectAccentTheme(themeKey) }
+                        ) {
+                            Text(
+                                text = themeKey,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) Color.Black else swatch,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
@@ -476,7 +518,7 @@ fun PlatformSettingsDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = StudioGold, contentColor = Color.Black),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("সেটিংস সংরক্ষণ করুন", fontWeight = FontWeight.Bold)
+                    Text("Save & Close", fontWeight = FontWeight.Bold)
                 }
             }
         }

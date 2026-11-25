@@ -24,11 +24,16 @@ import java.util.Date
 import java.util.Locale
 import android.util.Log
 import com.example.R
+import com.example.data.FirestoreArcadeScore
+import com.example.data.FirestoreGalleryImage
+import com.example.data.FirestoreRepository
+import com.example.ui.components.RemoteGalleryUiState
+import com.example.util.SoundFxManager
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
@@ -36,7 +41,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -65,18 +73,51 @@ data class ContactFormState(
     val errorMessage: String? = null
 )
 
+enum class ActiveNativeGame {
+    NONE, VOID_RUNNER, CYBER_BREAKER, QUANTUM_2048
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
 class StudioViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: StudioRepository
+    private val firestoreRepository: FirestoreRepository
+
+    private val _firebaseUid = MutableStateFlow<String?>(null)
+    val firebaseUid: StateFlow<String?> = _firebaseUid.asStateFlow()
+
+    private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
+        val uid = auth.currentUser?.uid
+        _firebaseUid.value = uid
+        if (uid != null) {
+            viewModelScope.launch {
+                firestoreRepository.seedInitialRemoteGalleryIfEmpty()
+            }
+        }
+    }
 
     init {
         val db = StudioDatabase.getDatabase(application)
         repository = StudioRepository(db.studioDao())
+        firestoreRepository = FirestoreRepository(application)
+
+        try {
+            _firebaseUid.value = Firebase.auth.currentUser?.uid
+            Firebase.auth.addAuthStateListener(authStateListener)
+        } catch (e: Exception) {
+            Log.w("StudioViewModel", "Firebase Auth listener setup skipped", e)
+        }
+
         viewModelScope.launch {
             repository.seedInitialCreationsIfEmpty()
             repository.seedDefaultUserIfEmpty()
             repository.seedInitialWritingsIfEmpty()
             repository.seedInitialSocialIfEmpty()
+
+            // Sync sound preference immediately
+            repository.platformSettings.firstOrNull()?.let { settings ->
+                SoundFxManager.isEnabled = settings.soundEffectsEnabled
+            }
 
             // Restore saved Write-In rich text draft from Room DB
             repository.currentWriteInDraft.firstOrNull()?.let { draft ->
@@ -90,6 +131,13 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        try {
+            Firebase.auth.removeAuthStateListener(authStateListener)
+        } catch (_: Exception) {}
     }
 
     // User Authentication State & Actions
@@ -142,11 +190,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val state = _authUiState.value
         val identifier = state.emailInput.ifBlank { state.usernameInput }
         if (identifier.isBlank()) {
-            _authUiState.value = state.copy(errorMessage = "ইমেইল অথবা ইউজারনেম লিখুন")
+            _authUiState.value = state.copy(errorMessage = "Please enter your email or username")
             return
         }
         if (state.passwordInput.isBlank()) {
-            _authUiState.value = state.copy(errorMessage = "পাসওয়ার্ড লিখুন")
+            _authUiState.value = state.copy(errorMessage = "Please enter your password")
             return
         }
 
@@ -159,12 +207,12 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                     isLoading = false,
                     isAuthDialogOpen = false,
                     passwordInput = "",
-                    successMessage = "স্বাগতম ${user.username}! লগইন সফল হয়েছে"
+                    successMessage = "Welcome back, ${user.username}!"
                 )
             }.onFailure { error ->
                 _authUiState.value = _authUiState.value.copy(
                     isLoading = false,
-                    errorMessage = error.message ?: "লগইন ব্যর্থ হয়েছে"
+                    errorMessage = error.message ?: "Sign-in failed. Please try again."
                 )
             }
         }
@@ -173,15 +221,15 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun register() {
         val state = _authUiState.value
         if (state.usernameInput.isBlank()) {
-            _authUiState.value = state.copy(errorMessage = "ইউজারনেম লিখুন")
+            _authUiState.value = state.copy(errorMessage = "Please enter a username")
             return
         }
         if (state.emailInput.isBlank() || !state.emailInput.contains("@")) {
-            _authUiState.value = state.copy(errorMessage = "সঠিক ইমেইল ঠিকানা দিন")
+            _authUiState.value = state.copy(errorMessage = "Please enter a valid email address")
             return
         }
         if (state.passwordInput.length < 4) {
-            _authUiState.value = state.copy(errorMessage = "পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে")
+            _authUiState.value = state.copy(errorMessage = "Password must be at least 4 characters")
             return
         }
 
@@ -199,12 +247,12 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                     isLoading = false,
                     isAuthDialogOpen = false,
                     passwordInput = "",
-                    successMessage = "একাউন্ট তৈরি সফল হয়েছে!"
+                    successMessage = "Account created successfully!"
                 )
             }.onFailure { error ->
                 _authUiState.value = _authUiState.value.copy(
                     isLoading = false,
-                    errorMessage = error.message ?: "একাউন্ট তৈরিতে সমস্যা হয়েছে"
+                    errorMessage = error.message ?: "Unable to create account"
                 )
             }
         }
@@ -221,49 +269,53 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                     val displayName = firebaseUser.displayName?.ifBlank { "NovaHub Explorer" } ?: "NovaHub Explorer"
                     val email = firebaseUser.email ?: ""
                     val initials = displayName.trim().take(2).uppercase().ifEmpty { "NH" }
+                    val cleanHandle = "@" + displayName.lowercase().replace(Regex("[^a-z0-9]"), "").ifEmpty { "explorer" }
+                    val photoUrl = firebaseUser.photoUrl?.toString() ?: ""
 
-                    // Sync profile to provisioned Firestore database when authenticated
-                    try {
-                        val dbId = getApplication<Application>().getString(R.string.firestore_database_id)
-                        val db = FirebaseFirestore.getInstance(dbId)
-                        db.collection("users").document(firebaseUser.uid).set(
-                            mapOf(
-                                "displayName" to displayName,
-                                "email" to email,
-                                "role" to "Verified Member",
-                                "avatarInitials" to initials
-                            ),
-                            SetOptions.merge()
-                        ).await()
-                    } catch (e: Exception) {
-                        Log.w("StudioViewModel", "Optional Firestore profile sync skipped", e)
-                    }
-
-                    val studioUser = StudioUser(
-                        username = displayName,
-                        email = email,
-                        passwordHash = "",
-                        roleTitle = "Google Verified",
-                        bio = "NovaHub Community Member",
-                        avatarInitials = initials
+                    val savedUser = repository.saveOrUpdateUserProfile(
+                        StudioUser(
+                            username = displayName,
+                            email = email,
+                            passwordHash = "",
+                            roleTitle = "Google Verified",
+                            bio = "NovaHub Community Creator & Explorer",
+                            avatarInitials = initials,
+                            handle = cleanHandle,
+                            avatarUrl = photoUrl,
+                            accentTheme = platformSettings.value.accentTheme
+                        )
                     )
+
+                    firestoreRepository.syncUserProfile(
+                        displayName = savedUser.username,
+                        handle = savedUser.handle,
+                        email = savedUser.email,
+                        roleTitle = savedUser.roleTitle,
+                        bio = savedUser.bio,
+                        avatarInitials = savedUser.avatarInitials,
+                        avatarUrl = savedUser.avatarUrl,
+                        accentTheme = savedUser.accentTheme,
+                        highScoreTotal = totalArcadeScore.value.toLong()
+                    )
+                    firestoreRepository.seedInitialRemoteGalleryIfEmpty()
+
                     _authUiState.value = _authUiState.value.copy(
-                        currentUser = studioUser,
+                        currentUser = savedUser,
                         isLoading = false,
                         isAuthDialogOpen = false,
-                        successMessage = "স্বাগতম $displayName! Google সাইন-ইন সফল হয়েছে"
+                        successMessage = "Welcome, $displayName! Google Sign-In complete."
                     )
                 } else {
                     _authUiState.value = _authUiState.value.copy(
                         isLoading = false,
-                        errorMessage = "Google সাইন-ইন সম্পন্ন করা যায়নি"
+                        errorMessage = "Could not complete Google Sign-In."
                     )
                 }
             } catch (e: Exception) {
                 Log.e("StudioViewModel", "Google Sign-In failed", e)
                 _authUiState.value = _authUiState.value.copy(
                     isLoading = false,
-                    errorMessage = e.localizedMessage ?: "Google সাইন-ইন ব্যর্থ হয়েছে"
+                    errorMessage = e.localizedMessage ?: "Google Sign-In failed"
                 )
             }
         }
@@ -284,7 +336,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         _authUiState.value = _authUiState.value.copy(
             currentUser = null,
             passwordInput = "",
-            successMessage = "লগআউট করা হয়েছে"
+            successMessage = "Signed out successfully"
         )
     }
 
@@ -381,7 +433,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Void Runner High Score
+    // Arcade High Scores
     val voidRunnerHighScore: StateFlow<Int> = repository.getHighestScore("void_runner")
         .map { it ?: 0 }
         .stateIn(
@@ -390,15 +442,215 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             initialValue = 0
         )
 
+    val cyberBreakerHighScore: StateFlow<Int> = repository.getHighestScore("cyber_breaker")
+        .map { it ?: 0 }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    val quantum2048HighScore: StateFlow<Int> = repository.getHighestScore("quantum_2048")
+        .map { it ?: 0 }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    val totalArcadeScore: StateFlow<Int> = repository.getTotalArcadeScore()
+        .map { it ?: 0 }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
     fun recordGameScore(score: Int, shards: Int) {
+        recordNativeGameScore("void_runner", "Void Runner", score, shards)
+    }
+
+    fun recordNativeGameScore(gameId: String, gameTitle: String, score: Int, metric: Int) {
         viewModelScope.launch {
             repository.saveGameScore(
                 GameScoreRecord(
-                    gameId = "void_runner",
+                    gameId = gameId,
                     score = score,
-                    shardsCollected = shards
+                    shardsCollected = metric
                 )
             )
+            val profile = activeUserProfile.value
+            firestoreRepository.submitArcadeScore(
+                playerName = profile.username,
+                avatarInitials = profile.avatarInitials,
+                gameId = gameId,
+                gameTitle = gameTitle,
+                score = score
+            )
+            firestoreRepository.syncUserProfile(
+                displayName = profile.username,
+                handle = profile.handle,
+                email = profile.email,
+                roleTitle = profile.roleTitle,
+                bio = profile.bio,
+                avatarInitials = profile.avatarInitials,
+                avatarUrl = profile.avatarUrl,
+                accentTheme = platformSettings.value.accentTheme,
+                highScoreTotal = (totalArcadeScore.value + score).toLong()
+            )
+        }
+    }
+
+    // Firestore Remote Gallery & Global Leaderboard
+    val remoteGalleryState: StateFlow<RemoteGalleryUiState> = _firebaseUid
+        .flatMapLatest { uid ->
+            if (uid == null) {
+                flowOf(RemoteGalleryUiState.Success(emptyList()))
+            } else {
+                firestoreRepository.observePublicGalleryImages()
+                    .map { result ->
+                        result.fold(
+                            onSuccess = { list -> RemoteGalleryUiState.Success(list) },
+                            onFailure = { err -> RemoteGalleryUiState.Error(err.localizedMessage ?: "Sync error") }
+                        )
+                    }
+                    .catch { emit(RemoteGalleryUiState.Error(it.localizedMessage ?: "Sync error")) }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = RemoteGalleryUiState.Loading
+        )
+
+    val arcadeLeaderboard: StateFlow<List<FirestoreArcadeScore>> = _firebaseUid
+        .flatMapLatest { uid ->
+            if (uid == null) {
+                flowOf(emptyList())
+            } else {
+                firestoreRepository.observeLeaderboard().catch { emit(emptyList()) }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    private val _remoteGalleryActionMessage = MutableStateFlow<String?>(null)
+    val remoteGalleryActionMessage: StateFlow<String?> = _remoteGalleryActionMessage.asStateFlow()
+
+    fun addRemoteGalleryImage(
+        title: String,
+        imageUrl: String,
+        category: String,
+        description: String,
+        visibility: String
+    ) {
+        viewModelScope.launch {
+            val result = firestoreRepository.addRemoteGalleryImage(title, imageUrl, category, description, visibility)
+            result.onSuccess {
+                SoundFxManager.playUiClick()
+                _remoteGalleryActionMessage.value = "Added \"$title\" to Cloud Firestore gallery!"
+            }.onFailure { err ->
+                _remoteGalleryActionMessage.value = err.localizedMessage ?: "Unable to save image URL."
+            }
+        }
+    }
+
+    fun likeRemoteGalleryImage(image: FirestoreGalleryImage) {
+        viewModelScope.launch {
+            val result = firestoreRepository.likeGalleryImage(image)
+            result.onSuccess {
+                SoundFxManager.playUiClick()
+            }.onFailure { err ->
+                _remoteGalleryActionMessage.value = err.localizedMessage ?: "Could not update like count."
+            }
+        }
+    }
+
+    fun deleteRemoteGalleryImage(imageId: String) {
+        viewModelScope.launch {
+            val result = firestoreRepository.deleteGalleryImage(imageId)
+            result.onSuccess {
+                _remoteGalleryActionMessage.value = "Removed image from Cloud gallery."
+            }.onFailure { err ->
+                _remoteGalleryActionMessage.value = err.localizedMessage ?: "Could not delete image."
+            }
+        }
+    }
+
+    fun clearRemoteGalleryActionMessage() {
+        _remoteGalleryActionMessage.value = null
+    }
+
+    // Creator Profile Management
+    val activeUserProfile: StateFlow<StudioUser> = combine(
+        repository.primaryUser,
+        _authUiState
+    ) { primary, auth ->
+        auth.currentUser ?: primary ?: StudioUser(
+            username = "NovaHub Creator",
+            email = "hello@novahub.community",
+            passwordHash = "",
+            roleTitle = "Community Creator",
+            bio = "Building arcade games, cloud galleries, and interactive stories on NovaHub.",
+            avatarInitials = "NH",
+            handle = "@novahub"
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = StudioUser(
+            username = "NovaHub Creator",
+            email = "hello@novahub.community",
+            passwordHash = "",
+            roleTitle = "Community Creator",
+            bio = "Building arcade games, cloud galleries, and interactive stories on NovaHub.",
+            avatarInitials = "NH",
+            handle = "@novahub"
+        )
+    )
+
+    fun saveUserProfile(
+        displayName: String,
+        handle: String,
+        roleTitle: String,
+        bio: String,
+        initials: String,
+        avatarUrl: String,
+        accentTheme: String
+    ) {
+        viewModelScope.launch {
+            val current = activeUserProfile.value
+            val normalizedHandle = if (handle.startsWith("@")) handle else "@$handle"
+            val updated = repository.saveOrUpdateUserProfile(
+                current.copy(
+                    username = displayName,
+                    handle = normalizedHandle,
+                    roleTitle = roleTitle,
+                    bio = bio,
+                    avatarInitials = initials,
+                    avatarUrl = avatarUrl,
+                    accentTheme = accentTheme
+                )
+            )
+            if (_authUiState.value.currentUser != null) {
+                _authUiState.value = _authUiState.value.copy(currentUser = updated)
+            }
+            setAccentTheme(accentTheme)
+            firestoreRepository.syncUserProfile(
+                displayName = updated.username,
+                handle = updated.handle,
+                email = updated.email,
+                roleTitle = updated.roleTitle,
+                bio = updated.bio,
+                avatarInitials = updated.avatarInitials,
+                avatarUrl = updated.avatarUrl,
+                accentTheme = accentTheme,
+                highScoreTotal = totalArcadeScore.value.toLong()
+            )
+            SoundFxManager.playUiClick()
         }
     }
 
@@ -593,12 +845,21 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Interactive Game Modal state
-    private val _isGameActive = MutableStateFlow(false)
-    val isGameActive: StateFlow<Boolean> = _isGameActive.asStateFlow()
+    // Interactive Native Game Modal State (Void Runner, Cyber Brick Breaker, Quantum 2048)
+    private val _activeNativeGame = MutableStateFlow(ActiveNativeGame.NONE)
+    val activeNativeGame: StateFlow<ActiveNativeGame> = _activeNativeGame.asStateFlow()
+
+    val isGameActive: StateFlow<Boolean> = _activeNativeGame
+        .map { it != ActiveNativeGame.NONE }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun launchNativeGame(game: ActiveNativeGame) {
+        SoundFxManager.playUiClick()
+        _activeNativeGame.value = game
+    }
 
     fun setGameActive(active: Boolean) {
-        _isGameActive.value = active
+        _activeNativeGame.value = if (active) ActiveNativeGame.VOID_RUNNER else ActiveNativeGame.NONE
     }
 
     // Web Browser Game Viewer Modal State
@@ -944,10 +1205,12 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
         if (q.isEmpty()) {
             // Provide quick direct section navigation suggestions
-            results.add(SearchResultItem.NavigationItem("Social Media Feed", "Live community posts, photo sharing & live discussions", "social"))
-            results.add(SearchResultItem.NavigationItem("Game Portal & Arcade", "Browser-based games & instant webview play", "portal"))
-            results.add(SearchResultItem.NavigationItem("Blog & Articles (/blog)", "Essays, devlogs & date-stamped journal entries", "writing"))
-            results.add(SearchResultItem.NavigationItem("Masonry Stills Gallery", "Staggered photo archive loaded with Coil", "masonry"))
+            results.add(SearchResultItem.NavigationItem("Social Hub & Feed", "Live community posts, photo sharing & live discussions", "social"))
+            results.add(SearchResultItem.NavigationItem("Game Portal & Arcade", "In-app arcade games, Care Survey 89 & HTML5 webview", "portal"))
+            results.add(SearchResultItem.NavigationItem("Cloud Remote Gallery", "Firestore remote image URLs loaded with Coil LazyVerticalGrid", "cloud_gallery"))
+            results.add(SearchResultItem.NavigationItem("Masonry Stills Gallery", "Staggered photo archive with pinch-to-zoom", "masonry"))
+            results.add(SearchResultItem.NavigationItem("Blog & Journal (/blog)", "Essays, devlogs & date-stamped journal entries", "writing"))
+            results.add(SearchResultItem.NavigationItem("Creator Profile & Leaderboard", "XP progression, achievement badges & theme accent", "profile"))
             results.add(SearchResultItem.NavigationItem("Contact / Write In", "Send dispatches directly to NovaHub Community", "contact"))
             return results
         }
@@ -1024,11 +1287,13 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
         // Search Sections
         val sections = listOf(
-            Triple("Hero & Overview", "Home section with studio manifesto & featured highlights", "hero"),
+            Triple("Hero & Overview", "Home section with showcase & featured highlights", "hero"),
             Triple("Social Hub & Feed", "Modern community feed with media uploads, likes, and chat", "social"),
-            Triple("Game Portal", "Interactive browser games, HTML5 canvas, and community builds", "portal"),
+            Triple("Game Portal & Arcade", "In-app arcade games, Care Survey 89, HTML5 canvas & community builds", "portal"),
+            Triple("Cloud Remote Gallery", "Firestore remote image URLs in Coil LazyVerticalGrid", "cloud_gallery"),
             Triple("Masonry Stills Archive", "Personal and curated photography in staggered masonry layout", "masonry"),
-            Triple("Writing & Essays", "Studio essays on game feel, 35mm nocturnal stills & creative code", "writing"),
+            Triple("Blog & Journal", "Essays on game feel, 35mm nocturnal stills & creative code", "writing"),
+            Triple("Creator Profile & Badges", "Profile editor, XP level, achievement badges & arcade leaderboard", "profile"),
             Triple("Write In / Direct Inbox", "Send inquiries with rich-text editor and autosaving drafts", "contact"),
             Triple("About NovaHub", "Public community platform, game portal & photography vision", "about")
         )
@@ -1121,7 +1386,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             _newPostMediaType.value = "NONE"
             _newPostMediaUri.value = ""
             _isPostUploading.value = false
-            _postSuccessMessage.value = if (containsAbuse) "পোস্টটি পর্যালোচনায় আছে" else "পোস্ট সফলভাবে প্রকাশিত হয়েছে!"
+            _postSuccessMessage.value = if (containsAbuse) "Post submitted for moderation review." else "Post published to the community feed!"
         }
     }
 
@@ -1138,7 +1403,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun reportPost(postId: Long) {
         viewModelScope.launch {
             repository.reportPost(postId)
-            _postSuccessMessage.value = "পোস্টটি অপব্যবহার হিসেবে রিপোর্ট করা হয়েছে ও সরানো হয়েছে"
+            _postSuccessMessage.value = "Post reported for safety review and hidden."
         }
     }
 
@@ -1297,6 +1562,25 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         val current = platformSettings.value
         viewModelScope.launch {
             repository.updatePlatformSettings(current.copy(allowPublicGameUploads = !current.allowPublicGameUploads))
+        }
+    }
+
+    fun toggleSoundEffects() {
+        val current = platformSettings.value
+        val next = !current.soundEffectsEnabled
+        SoundFxManager.isEnabled = next
+        if (next) SoundFxManager.playUiClick()
+        viewModelScope.launch {
+            repository.updatePlatformSettings(current.copy(soundEffectsEnabled = next))
+        }
+    }
+
+    fun setAccentTheme(theme: String) {
+        val cleanTheme = if (theme in listOf("GOLD", "CYAN", "EMERALD")) theme else "GOLD"
+        val current = platformSettings.value
+        if (current.accentTheme == cleanTheme) return
+        viewModelScope.launch {
+            repository.updatePlatformSettings(current.copy(accentTheme = cleanTheme))
         }
     }
 

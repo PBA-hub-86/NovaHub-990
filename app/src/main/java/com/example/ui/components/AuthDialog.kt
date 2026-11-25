@@ -147,7 +147,7 @@ fun AuthDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = if (authUiState.currentUser != null) "Studio Profile" else if (authUiState.isRegisterMode) "Create Account / নতুন একাউন্ট" else "Sign In / লগইন",
+                                text = if (authUiState.currentUser != null) "Member Profile" else if (authUiState.isRegisterMode) "Create Account" else "Sign In",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = StudioTextPrimary
@@ -202,7 +202,7 @@ fun AuthDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "লগইন (Sign In)",
+                                text = "Sign In",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (!authUiState.isRegisterMode) Color(0xFF08090C) else StudioTextSecondary
@@ -220,7 +220,7 @@ fun AuthDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "নতুন একাউন্ট (Register)",
+                                text = "Create Account",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (authUiState.isRegisterMode) Color(0xFF08090C) else StudioTextSecondary
@@ -258,7 +258,7 @@ fun AuthDialog(
                         OutlinedTextField(
                             value = authUiState.usernameInput,
                             onValueChange = onUsernameChange,
-                            label = { Text("আপনার নাম / ইউজারনেম") },
+                            label = { Text("Display Name / Username") },
                             leadingIcon = {
                                 Icon(Icons.Default.Person, contentDescription = null, tint = StudioGold)
                             },
@@ -284,7 +284,7 @@ fun AuthDialog(
                     OutlinedTextField(
                         value = authUiState.emailInput,
                         onValueChange = onEmailChange,
-                        label = { Text(if (authUiState.isRegisterMode) "ইমেইল অ্যাড্রেস" else "ইমেইল বা ইউজারনেম") },
+                        label = { Text(if (authUiState.isRegisterMode) "Email Address" else "Email or Username") },
                         leadingIcon = {
                             Icon(Icons.Default.Email, contentDescription = null, tint = StudioGold)
                         },
@@ -312,7 +312,7 @@ fun AuthDialog(
                     OutlinedTextField(
                         value = authUiState.passwordInput,
                         onValueChange = onPasswordChange,
-                        label = { Text("পাসওয়ার্ড") },
+                        label = { Text("Password") },
                         leadingIcon = {
                             Icon(Icons.Default.Lock, contentDescription = null, tint = StudioGold)
                         },
@@ -375,17 +375,17 @@ fun AuthDialog(
                                         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                                         onGoogleSignInToken(googleIdTokenCredential.idToken)
                                     } else {
-                                        onAuthError("অপ্রত্যাশিত Google ক্রেডেনশিয়াল পাওয়া গেছে")
+                                        onAuthError("Unexpected Google credential received")
                                     }
                                 } catch (e: GetCredentialCancellationException) {
                                     Log.w("AuthDialog", "Google Sign-In cancelled by user", e)
                                     onAuthLoading(false)
                                 } catch (e: GetCredentialException) {
                                     Log.e("AuthDialog", "Google Sign-In failed", e)
-                                    onAuthError(e.localizedMessage ?: "Google সাইন-ইন সম্পন্ন করা যায়নি")
+                                    onAuthError(e.localizedMessage ?: "Could not complete Google Sign-In")
                                 } catch (e: Exception) {
                                     Log.e("AuthDialog", "Unexpected Google Sign-In error", e)
-                                    onAuthError(e.localizedMessage ?: "সাইন-ইন করতে সমস্যা হয়েছে")
+                                    onAuthError(e.localizedMessage ?: "Sign-in encountered an unexpected error")
                                 }
                             }
                         },
@@ -431,7 +431,7 @@ fun AuthDialog(
                             )
                         } else {
                             Text(
-                                text = if (authUiState.isRegisterMode) "একাউন্ট তৈরি সম্পন্ন করুন" else "লগইন করুন",
+                                text = if (authUiState.isRegisterMode) "Complete Registration" else "Sign In",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
@@ -447,13 +447,13 @@ fun AuthDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (authUiState.isRegisterMode) "ইতোমধ্যে একাউন্ট আছে?" else "নতুন ইউজার?",
+                            text = if (authUiState.isRegisterMode) "Already have an account?" else "New to NovaHub?",
                             fontSize = 12.sp,
                             color = StudioTextSecondary
                         )
                         TextButton(onClick = onToggleMode) {
                             Text(
-                                text = if (authUiState.isRegisterMode) "লগইন করুন" else "একাউন্ট খুলুন",
+                                text = if (authUiState.isRegisterMode) "Sign In" else "Create Account",
                                 color = StudioGold,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
@@ -555,7 +555,7 @@ private fun UserProfileCard(
                 .testTag("auth_logout_btn")
         ) {
             Text(
-                text = "সাইন আউট (Sign Out)",
+                text = "Sign Out",
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp
             )

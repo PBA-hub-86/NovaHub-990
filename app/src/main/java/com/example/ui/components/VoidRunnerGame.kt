@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -68,7 +69,7 @@ import com.example.ui.theme.StudioSurface
 import com.example.ui.theme.StudioTextMuted
 import com.example.ui.theme.StudioTextPrimary
 import com.example.ui.theme.StudioTextSecondary
-import kotlin.math.hypot
+import com.example.util.SoundFxManager
 import kotlin.random.Random
 
 data class GameObstacle(
@@ -88,6 +89,8 @@ fun VoidRunnerGame(
     onCloseGame: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    BackHandler { onCloseGame() }
+
     var isGameOver by remember { mutableStateOf(false) }
     var currentScore by remember { mutableIntStateOf(0) }
     var shardsCollected by remember { mutableIntStateOf(0) }
@@ -170,9 +173,11 @@ fun VoidRunnerGame(
                             // Collect shard
                             shardsCollected += 1
                             currentScore += 100
+                            SoundFxManager.playShardCollect()
                             iterator.remove()
                         } else {
                             // Hit hazard -> Game Over
+                            SoundFxManager.playGameOver()
                             isGameOver = true
                             onScoreSaved(currentScore, shardsCollected)
                             break

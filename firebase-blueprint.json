@@ -4,10 +4,56 @@
       "collection": "users",
       "fields": {
         "displayName": { "type": "string" },
+        "handle": { "type": "string" },
         "email": { "type": "string" },
-        "role": { "type": "string" },
+        "roleTitle": { "type": "string" },
         "bio": { "type": "string" },
         "avatarInitials": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "accentTheme": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "PublicProfile": {
+      "collection": "public_profiles",
+      "fields": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "handle": { "type": "string" },
+        "roleTitle": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatarInitials": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "accentTheme": { "type": "string" },
+        "highScoreTotal": { "type": "number" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "GalleryImage": {
+      "collection": "gallery_images",
+      "fields": {
+        "userId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "visibility": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      }
+    },
+    "ArcadeScore": {
+      "collection": "arcade_scores",
+      "fields": {
+        "userId": { "type": "string" },
+        "playerName": { "type": "string" },
+        "avatarInitials": { "type": "string" },
+        "gameId": { "type": "string" },
+        "gameTitle": { "type": "string" },
+        "score": { "type": "number" },
         "createdAt": { "type": "timestamp" }
       }
     },

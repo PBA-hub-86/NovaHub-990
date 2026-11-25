@@ -1,69 +1,248 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isAuthenticated() {
+
+    function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // User profiles
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && !id.matches('.*[/\\\\].*');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidHttpsUrl(url) {
+      return url is string && url.size() <= 600 && url.matches('^https?://.*');
+    }
+
+    // Private User Profiles (contains email PII - strictly owner read/write only)
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isOwner(userId) &&
-        request.resource.data.keys().hasAll(['displayName', 'email']) &&
-        request.resource.data.displayName is string &&
-        request.resource.data.displayName.size() > 0 &&
-        request.resource.data.displayName.size() <= 100;
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        incoming().keys().hasAll(['displayName', 'email', 'roleTitle', 'avatarInitials']) &&
+        incoming().keys().hasOnly([
+          'displayName', 'handle', 'email', 'roleTitle', 'bio',
+          'avatarInitials', 'avatarUrl', 'accentTheme', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().displayName is string &&
+        incoming().displayName.size() >= 1 &&
+        incoming().displayName.size() <= 60 &&
+        incoming().email is string &&
+        incoming().email.size() <= 120 &&
+        incoming().roleTitle is string &&
+        incoming().roleTitle.size() >= 1 &&
+        incoming().roleTitle.size() <= 40 &&
+        incoming().avatarInitials is string &&
+        incoming().avatarInitials.size() >= 1 &&
+        incoming().avatarInitials.size() <= 4 &&
+        (!('handle' in incoming().keys()) || (incoming().handle is string && incoming().handle.size() <= 40)) &&
+        (!('bio' in incoming().keys()) || (incoming().bio is string && incoming().bio.size() <= 240)) &&
+        (!('avatarUrl' in incoming().keys()) || incoming().avatarUrl == '' || isValidHttpsUrl(incoming().avatarUrl)) &&
+        (!('accentTheme' in incoming().keys()) || incoming().accentTheme in ['GOLD', 'CYAN', 'EMERALD']) &&
+        (!('createdAt' in incoming().keys()) || isValidTimestamp(incoming().createdAt)) &&
+        (!('updatedAt' in incoming().keys()) || isValidTimestamp(incoming().updatedAt));
+
+      allow update: if isOwner(userId) &&
+        incoming().keys().hasAll(['displayName', 'email', 'roleTitle', 'avatarInitials']) &&
+        incoming().keys().hasOnly([
+          'displayName', 'handle', 'email', 'roleTitle', 'bio',
+          'avatarInitials', 'avatarUrl', 'accentTheme', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().displayName is string &&
+        incoming().displayName.size() >= 1 &&
+        incoming().displayName.size() <= 60 &&
+        incoming().email is string &&
+        incoming().email.size() <= 120 &&
+        (!('createdAt' in existing().keys()) || !('createdAt' in incoming().keys()) || incoming().createdAt == existing().createdAt) &&
+        (!('updatedAt' in incoming().keys()) || isValidTimestamp(incoming().updatedAt));
+
       allow delete: if false;
+    }
+
+    // Public Creator Profiles (no PII / email allowed)
+    match /public_profiles/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isOwner(userId) &&
+        isValidId(userId) &&
+        !('email' in incoming().keys()) &&
+        incoming().userId == userId &&
+        incoming().keys().hasAll(['userId', 'displayName', 'roleTitle', 'avatarInitials', 'updatedAt']) &&
+        incoming().keys().hasOnly([
+          'userId', 'displayName', 'handle', 'roleTitle', 'bio',
+          'avatarInitials', 'avatarUrl', 'accentTheme', 'highScoreTotal', 'updatedAt'
+        ]) &&
+        incoming().displayName is string &&
+        incoming().displayName.size() >= 1 &&
+        incoming().displayName.size() <= 60 &&
+        incoming().roleTitle is string &&
+        incoming().roleTitle.size() >= 1 &&
+        incoming().roleTitle.size() <= 40 &&
+        incoming().avatarInitials is string &&
+        incoming().avatarInitials.size() >= 1 &&
+        incoming().avatarInitials.size() <= 4 &&
+        (!('handle' in incoming().keys()) || (incoming().handle is string && incoming().handle.size() <= 40)) &&
+        (!('bio' in incoming().keys()) || (incoming().bio is string && incoming().bio.size() <= 240)) &&
+        (!('avatarUrl' in incoming().keys()) || incoming().avatarUrl == '' || isValidHttpsUrl(incoming().avatarUrl)) &&
+        (!('accentTheme' in incoming().keys()) || incoming().accentTheme in ['GOLD', 'CYAN', 'EMERALD']) &&
+        (!('highScoreTotal' in incoming().keys()) || (incoming().highScoreTotal is int && incoming().highScoreTotal >= 0)) &&
+        isValidTimestamp(incoming().updatedAt);
+
+      allow delete: if isOwner(userId);
+    }
+
+    // Remote Image Gallery collection loaded with Coil in LazyVerticalGrid
+    match /gallery_images/{imageId} {
+      allow get, list: if isSignedIn() && (
+        resource.data.visibility == 'PUBLIC' ||
+        resource.data.userId == request.auth.uid
+      );
+
+      allow create: if isSignedIn() &&
+        isValidId(imageId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll([
+          'userId', 'authorName', 'title', 'imageUrl', 'category',
+          'visibility', 'likesCount', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'authorName', 'title', 'imageUrl', 'category',
+          'description', 'visibility', 'likesCount', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().authorName is string &&
+        incoming().authorName.size() >= 1 &&
+        incoming().authorName.size() <= 60 &&
+        incoming().title is string &&
+        incoming().title.size() >= 1 &&
+        incoming().title.size() <= 100 &&
+        isValidHttpsUrl(incoming().imageUrl) &&
+        incoming().category is string &&
+        incoming().category.size() >= 1 &&
+        incoming().category.size() <= 40 &&
+        (!('description' in incoming().keys()) || (incoming().description is string && incoming().description.size() <= 300)) &&
+        incoming().visibility in ['PUBLIC', 'PRIVATE'] &&
+        incoming().likesCount is int &&
+        incoming().likesCount == 0 &&
+        isValidTimestamp(incoming().createdAt) &&
+        isValidTimestamp(incoming().updatedAt);
+
+      allow update: if isSignedIn() && (
+        (
+          existing().userId == request.auth.uid &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          isValidTimestamp(incoming().updatedAt) &&
+          incoming().title is string && incoming().title.size() >= 1 && incoming().title.size() <= 100 &&
+          isValidHttpsUrl(incoming().imageUrl) &&
+          incoming().visibility in ['PUBLIC', 'PRIVATE']
+        ) ||
+        (
+          existing().visibility == 'PUBLIC' &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt']) &&
+          incoming().likesCount is int &&
+          incoming().likesCount >= 0 &&
+          isValidTimestamp(incoming().updatedAt)
+        )
+      );
+
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Live Cloud Arcade Leaderboard Scores
+    match /arcade_scores/{scoreId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+        isValidId(scoreId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll([
+          'userId', 'playerName', 'avatarInitials', 'gameId', 'gameTitle', 'score', 'createdAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'playerName', 'avatarInitials', 'gameId', 'gameTitle', 'score', 'createdAt'
+        ]) &&
+        incoming().playerName is string &&
+        incoming().playerName.size() >= 1 &&
+        incoming().playerName.size() <= 60 &&
+        incoming().avatarInitials is string &&
+        incoming().avatarInitials.size() >= 1 &&
+        incoming().avatarInitials.size() <= 4 &&
+        incoming().gameId in ['void_runner', 'cyber_breaker', 'quantum_2048'] &&
+        incoming().gameTitle is string &&
+        incoming().gameTitle.size() >= 1 &&
+        incoming().gameTitle.size() <= 60 &&
+        incoming().score is int &&
+        incoming().score >= 0 &&
+        incoming().score <= 10000000 &&
+        isValidTimestamp(incoming().createdAt);
+
+      allow update: if false;
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
     }
 
     // Social feed posts
     match /social_posts/{postId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.resource.data.authorId == request.auth.uid &&
-        request.resource.data.keys().hasAll(['authorId', 'authorName', 'textContent']) &&
-        request.resource.data.textContent is string &&
-        request.resource.data.textContent.size() > 0 &&
-        request.resource.data.textContent.size() <= 2000;
-      allow update: if isAuthenticated() && (
-        // Allow author to edit or any authenticated user to toggle like
-        request.resource.data.authorId == request.auth.uid ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'likedUserIds'])
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+        isValidId(postId) &&
+        incoming().authorId == request.auth.uid &&
+        incoming().keys().hasAll(['authorId', 'authorName', 'textContent']) &&
+        incoming().textContent is string &&
+        incoming().textContent.size() > 0 &&
+        incoming().textContent.size() <= 2000;
+      allow update: if isSignedIn() && (
+        existing().authorId == request.auth.uid ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'likedUserIds'])
       );
-      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
     }
 
     // Published community HTML5 games and apps
     match /community_games/{gameId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.resource.data.authorId == request.auth.uid &&
-        request.resource.data.keys().hasAll(['authorId', 'authorName', 'title', 'webGameUrl']) &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() > 0 &&
-        request.resource.data.title.size() <= 120 &&
-        request.resource.data.webGameUrl is string &&
-        (request.resource.data.webGameUrl.matches('^https?://.*'));
-      allow update: if isAuthenticated() && resource.data.authorId == request.auth.uid;
-      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+        isValidId(gameId) &&
+        incoming().authorId == request.auth.uid &&
+        incoming().keys().hasAll(['authorId', 'authorName', 'title', 'webGameUrl']) &&
+        incoming().title is string &&
+        incoming().title.size() > 0 &&
+        incoming().title.size() <= 120 &&
+        isValidHttpsUrl(incoming().webGameUrl);
+      allow update: if isSignedIn() && existing().authorId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
     }
 
     // Community live chat messages
     match /chat_messages/{messageId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() &&
-        request.resource.data.senderId == request.auth.uid &&
-        request.resource.data.keys().hasAll(['senderId', 'senderName', 'messageText']) &&
-        request.resource.data.messageText is string &&
-        request.resource.data.messageText.size() > 0 &&
-        request.resource.data.messageText.size() <= 1000;
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() &&
+        isValidId(messageId) &&
+        incoming().senderId == request.auth.uid &&
+        incoming().keys().hasAll(['senderId', 'senderName', 'messageText']) &&
+        incoming().messageText is string &&
+        incoming().messageText.size() > 0 &&
+        incoming().messageText.size() <= 1000;
       allow update: if false;
-      allow delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().senderId == request.auth.uid;
+    }
+
+    // Explicit default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

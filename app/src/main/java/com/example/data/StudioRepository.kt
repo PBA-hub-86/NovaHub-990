@@ -44,6 +44,7 @@ class StudioRepository(private val dao: StudioDao) {
 
     fun getHighestScore(gameId: String): Flow<Int?> = dao.getHighestScore(gameId)
     fun getHighScores(gameId: String): Flow<List<GameScoreRecord>> = dao.getHighScores(gameId)
+    fun getTotalArcadeScore(): Flow<Int?> = dao.getTotalArcadeScore()
 
     suspend fun saveMessage(message: StudioMessage): Long = dao.insertMessage(message)
     suspend fun deleteMessage(id: Long) = dao.deleteMessageById(id)
@@ -109,37 +110,37 @@ class StudioRepository(private val dao: StudioDao) {
                     authorName = "NovaHub Official",
                     authorRole = "Community Hub",
                     authorAvatarInitials = "NH",
-                    textContent = "স্বাগতম NovaHub-এ! 🚀 ফেসবুক ও কমিউনিটি থেকে আসা সকল ভিজিটরকে শুভেচ্ছা।\nএখানে নতুন HTML5 গেম খেলুন (বিশেষ আকর্ষণ: Care Survey 89!), ছবি ও ভিডিও শেয়ার করুন এবং লাইভ চ্যাট উপভোগ করুন।",
+                    textContent = "Welcome to NovaHub! Explore instant HTML5 games (including Care Survey 89 and our built-in arcade), share photography in the Cloud Gallery, and join live community discussions.",
                     mediaType = "IMAGE",
                     mediaThumbnail = R.drawable.ai_cyberpunk_alley_1789701580711,
                     likesCount = 42,
                     sharesCount = 12,
                     isLikedByUser = true,
-                    timeAgo = "১০ মিনিট আগে"
+                    timeAgo = "10m ago"
                 ),
                 SocialPost(
                     authorName = "Ayesha Rahman",
                     authorRole = "Indie Game Designer",
                     authorAvatarInitials = "AR",
-                    textContent = "আমার নতুন সাইবার আর্কেড গেমের আর্লি আলফা টেস্ট চলছে! গেম সেকশনে গিয়ে ট্রাই করে দেখুন এবং আপনার হাই স্কোর কমেন্টে শেয়ার করুন।",
+                    textContent = "Testing the new Cyber Brick Breaker & Quantum 2048 arcade cabinet inside NovaHub! Drop your best scores on the live leaderboard.",
                     mediaType = "IMAGE",
                     mediaThumbnail = R.drawable.game_void_runner_1789660196140,
                     likesCount = 28,
                     sharesCount = 5,
                     isLikedByUser = false,
-                    timeAgo = "১ ঘণ্টা আগে"
+                    timeAgo = "1h ago"
                 ),
                 SocialPost(
                     authorName = "Tahmid Hasan",
                     authorRole = "Cinematographer",
                     authorAvatarInitials = "TH",
-                    textContent = "বৃষ্টিভেজা ঢাকার রাতের আলো ও নদী তীরের ৪কে ড্রোন শট। কমিউনিটির সবার সাথে শেয়ার করলাম। রিফ্রেশ করলেও এটি সেভ থাকবে।",
+                    textContent = "Monsoon twilight reflections and aerial riverfront sweeps uploaded to our high-res gallery. All saved posts and scores persist reliably.",
                     mediaType = "VIDEO",
                     mediaThumbnail = R.drawable.ai_veo_drone_river_1789701598733,
                     likesCount = 35,
                     sharesCount = 9,
                     isLikedByUser = false,
-                    timeAgo = "৩ ঘণ্টা আগে"
+                    timeAgo = "3h ago"
                 )
             )
             for (p in defaultPosts) {
@@ -153,21 +154,21 @@ class StudioRepository(private val dao: StudioDao) {
                 ChatMessage(
                     senderName = "Ayesha Rahman",
                     senderAvatar = "AR",
-                    messageText = "হ্যালো NovaHub কমিউনিটি! নতুন সোশ্যাল মিডিয়া ও গেম হাব দারুণ লাগছে!",
+                    messageText = "Hey NovaHub community! Loving the refreshed game portal and profile achievements.",
                     isFromCurrentUser = false,
                     timeFormatted = "10:15 AM"
                 ),
                 ChatMessage(
                     senderName = "NovaHub Official",
                     senderAvatar = "NH",
-                    messageText = "ধন্যবাদ আয়েশা! গেম পোর্টালে নতুন Care Survey 89 এবং আর্কেড গেমগুলো এখনই ট্রাই করে দেখুন।",
+                    messageText = "Glad you like it, Ayesha! Try Cyber Brick Breaker, Quantum 2048, and Care Survey 89 right from the arcade.",
                     isFromCurrentUser = true,
                     timeFormatted = "10:18 AM"
                 ),
                 ChatMessage(
                     senderName = "System Moderator",
                     senderAvatar = "NH",
-                    messageText = "🛡️ কমিউনিটি নিরাপত্তা সক্রিয়: কোনো অসদুপায় বা স্প্যাম গ্রহণযোগ্য নয়।",
+                    messageText = "Community safety filter active: respectful discussions and clean content keep NovaHub welcoming for everyone.",
                     isFromCurrentUser = false,
                     timeFormatted = "10:20 AM"
                 )
@@ -297,6 +298,9 @@ Audio should complement the silence, never overpower it.
     }
 
     suspend fun seedInitialCreationsIfEmpty() {
+        val existingCount = dao.getCreationCount().first()
+        if (existingCount > 0) return
+
         val initialCreations = listOf(
             UserCreation(
                 title = "Neon Monsoon Alleyway",
@@ -356,6 +360,28 @@ Audio should complement the silence, never overpower it.
 
     // User Authentication & Profile
     val allUsers: Flow<List<StudioUser>> = dao.getAllUsers()
+    val primaryUser: Flow<StudioUser?> = dao.observePrimaryUser()
+
+    suspend fun saveOrUpdateUserProfile(user: StudioUser): StudioUser {
+        val existing = if (user.id > 0L) dao.getUserById(user.id) else dao.getPrimaryUser()
+        return if (existing != null) {
+            val updated = existing.copy(
+                username = user.username,
+                email = user.email.ifBlank { existing.email },
+                roleTitle = user.roleTitle,
+                bio = user.bio,
+                avatarInitials = user.avatarInitials,
+                handle = user.handle,
+                avatarUrl = user.avatarUrl,
+                accentTheme = user.accentTheme
+            )
+            dao.updateUser(updated)
+            updated
+        } else {
+            val newId = dao.insertUser(user)
+            user.copy(id = newId)
+        }
+    }
 
     suspend fun registerUser(
         username: String,
@@ -367,34 +393,36 @@ Audio should complement the silence, never overpower it.
         val cleanEmail = email.trim().lowercase()
         val cleanUsername = username.trim()
         if (cleanUsername.isBlank()) {
-            return Result.failure(IllegalArgumentException("ইউজারনেম খালি রাখা যাবে না"))
+            return Result.failure(IllegalArgumentException("Username cannot be empty"))
         }
         if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
-            return Result.failure(IllegalArgumentException("সঠিক ইমেইল অ্যাড্রেস লিখুন"))
+            return Result.failure(IllegalArgumentException("Please enter a valid email address"))
         }
         if (password.length < 4) {
-            return Result.failure(IllegalArgumentException("পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে"))
+            return Result.failure(IllegalArgumentException("Password must be at least 4 characters"))
         }
 
         val existingByEmail = dao.getUserByEmail(cleanEmail)
         if (existingByEmail != null) {
-            return Result.failure(IllegalStateException("এই ইমেইল দিয়ে ইতোমধ্যে একাউন্ট খোলা আছে"))
+            return Result.failure(IllegalStateException("An account with this email already exists"))
         }
 
         val existingByUsername = dao.getUserByUsername(cleanUsername)
         if (existingByUsername != null) {
-            return Result.failure(IllegalStateException("এই ইউজারনেমটি অন্য কেউ ব্যবহার করছে"))
+            return Result.failure(IllegalStateException("This username is already taken"))
         }
 
         val initials = cleanUsername.take(2).uppercase()
         val hashed = hashPassword(password)
+        val cleanHandle = "@" + cleanUsername.lowercase().replace(Regex("[^a-z0-9]"), "").ifEmpty { "creator" }
         val newUser = StudioUser(
             username = cleanUsername,
             email = cleanEmail,
             passwordHash = hashed,
             roleTitle = roleTitle,
             bio = bio,
-            avatarInitials = if (initials.isNotEmpty()) initials else "NH"
+            avatarInitials = if (initials.isNotEmpty()) initials else "NH",
+            handle = cleanHandle
         )
         val id = dao.insertUser(newUser)
         return Result.success(newUser.copy(id = id))
@@ -403,18 +431,17 @@ Audio should complement the silence, never overpower it.
     suspend fun authenticateUser(emailOrUsername: String, password: String): Result<StudioUser> {
         val query = emailOrUsername.trim()
         if (query.isBlank() || password.isBlank()) {
-            return Result.failure(IllegalArgumentException("ইমেইল/ইউজারনেম এবং পাসওয়ার্ড পূরণ করুন"))
+            return Result.failure(IllegalArgumentException("Please enter your email/username and password"))
         }
         val user = if (query.contains("@")) {
             dao.getUserByEmail(query.lowercase())
         } else {
             dao.getUserByUsername(query)
-        } ?: return Result.failure(IllegalArgumentException("কোনো একাউন্ট পাওয়া যায়নি। দয়া করে আগে সাইন আপ করুন"))
+        } ?: return Result.failure(IllegalArgumentException("Account not found. Please register first."))
 
         val hashed = hashPassword(password)
-        // Check hash or backward-compatible plain text check
         if (user.passwordHash != hashed && user.passwordHash != password) {
-            return Result.failure(IllegalArgumentException("ভুল পাসওয়ার্ড! আবার চেষ্টা করুন"))
+            return Result.failure(IllegalArgumentException("Incorrect password. Please try again."))
         }
         return Result.success(user)
     }
@@ -434,12 +461,13 @@ Audio should complement the silence, never overpower it.
         if (count == null) {
             dao.insertUser(
                 StudioUser(
-                    username = "NovaHub Official",
+                    username = "NovaHub Explorer",
                     email = "hello@novahub.community",
                     passwordHash = hashPassword("novahub2026"),
-                    roleTitle = "Community Hub",
-                    bio = "Open creative playground for HTML5 web games, fine art stills & live community.",
-                    avatarInitials = "NH"
+                    roleTitle = "Arcade Creator",
+                    bio = "Open creative hub explorer crafting indie games, stills & digital stories.",
+                    avatarInitials = "NH",
+                    handle = "@novahub"
                 )
             )
         }
@@ -451,7 +479,7 @@ Audio should complement the silence, never overpower it.
             id = "care_survey_89",
             title = "Care Survey 89",
             subtitle = "Featured Interactive Web Game",
-            description = "সরাসরি ব্রাউজার ও অ্যাপ স্যান্ডবক্সে খেলার জন্য যুক্ত করা নতুন ইন্টারঅ্যাক্টিভ ওয়েব গেম ও চ্যালেঞ্জ। কোনো ডাউনলোড ছাড়াই খেলুন!",
+            description = "Interactive web experience and live challenge running inside NovaHub's secure HTML5 sandbox. Play immediately with zero downloads!",
             techStack = listOf("HTML5", "Cloudflare Workers", "Interactive Web"),
             status = "Featured Live",
             isPlayableInApp = false,
@@ -464,14 +492,42 @@ Audio should complement the silence, never overpower it.
         StudioGame(
             id = "void_runner",
             title = "Void Runner",
-            subtitle = "Atmospheric Arcade / Kinetic Dodge",
+            subtitle = "In-App Action / Kinetic Dodge",
             description = "A minimalist kinetic canvas game where you steer a resonance prism through shifting obsidian spires, absorbing luminous gold shards.",
-            techStack = listOf("Compose Canvas", "Kinetic Physics", "60FPS Engine", "Audio Synthesizer"),
-            status = "Playable Demo",
+            techStack = listOf("Compose Canvas", "Kinetic Physics", "60FPS Engine", "Sound FX"),
+            status = "In-App Arcade",
             isPlayableInApp = true,
             imageResId = R.drawable.game_void_runner_1789660196140,
             accentColorHex = 0xFFE5A950,
-            gameplayNote = "Instant 60fps in-app interactive runner with real-time collision & score engine.",
+            gameplayNote = "Instant 60fps native runner with real-time collision & procedural audio.",
+            webGameUrl = "",
+            isWebGame = false
+        ),
+        StudioGame(
+            id = "cyber_breaker",
+            title = "Cyber Brick Breaker",
+            subtitle = "In-App Arcade / Neon Paddle",
+            description = "Fast-paced cybernetic brick breaker built natively in Compose Canvas. Chain combo bounces, catch laser & wide-paddle powerups, and clear neon tiers.",
+            techStack = listOf("Compose Canvas", "Brick Physics", "Power-Ups", "Sound FX"),
+            status = "In-App Arcade",
+            isPlayableInApp = true,
+            imageResId = R.drawable.ai_cyberpunk_alley_1789701580711,
+            accentColorHex = 0xFF38BDF8,
+            gameplayNote = "Native 60fps arcade brick smasher with multi-hit armored tiles and combos.",
+            webGameUrl = "",
+            isWebGame = false
+        ),
+        StudioGame(
+            id = "quantum_2048",
+            title = "Quantum 2048",
+            subtitle = "In-App Puzzle / Neon Matrix",
+            description = "Swipe-driven 4x4 kinetic number puzzle with neon energy tiles, move undo support, and real-time merge synthesis sound effects.",
+            techStack = listOf("Swipe Gestures", "State Undo", "60FPS Grid", "Sound FX"),
+            status = "In-App Arcade",
+            isPlayableInApp = true,
+            imageResId = R.drawable.ai_obsidian_supercar_1789701616237,
+            accentColorHex = 0xFF34D399,
+            gameplayNote = "Instant swipe or D-pad puzzle right inside NovaHub with high-score tracking.",
             webGameUrl = "",
             isWebGame = false
         ),

@@ -120,7 +120,7 @@ fun ContactSection(
     ) {
         // Section index
         Text(
-            text = "04 / WRITE IN",
+            text = "07 / WRITE IN",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = StudioGold,
@@ -199,13 +199,13 @@ fun ContactSection(
 
                     Column {
                         Text(
-                            text = if (currentUser != null) "লগইন আছেন: ${currentUser.username}" else "স্টুডিও মেম্বার একাউন্ট",
+                            text = if (currentUser != null) "Signed in as: ${currentUser.username}" else "Community Member Account",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = StudioTextPrimary
                         )
                         Text(
-                            text = if (currentUser != null) "${currentUser.roleTitle} • ${currentUser.email}" else "লগইন করুন বা নতুন একাউন্ট তৈরি করুন",
+                            text = if (currentUser != null) "${currentUser.roleTitle} • ${currentUser.email}" else "Sign in or create an account to sync across NovaHub",
                             fontSize = 11.sp,
                             color = if (currentUser != null) StudioEmerald else StudioTextMuted
                         )
@@ -219,7 +219,7 @@ fun ContactSection(
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = if (currentUser != null) "প্রোফাইল" else "লগইন / সাইন আপ",
+                        text = if (currentUser != null) "Profile" else "Sign In / Join",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (currentUser != null) StudioEmerald else Color(0xFF08090C)

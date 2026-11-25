@@ -58,7 +58,7 @@ fun AboutSection(
     ) {
         // Section index
         Text(
-            text = "01 / ABOUT",
+            text = "08 / ABOUT",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = StudioGold,

@@ -110,7 +110,7 @@ fun SearchDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Search Studio / সন্ধান করুন",
+                                text = "Search NovaHub",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = StudioTextPrimary
@@ -199,7 +199,7 @@ fun SearchDialog(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "কোনো ফলাফল পাওয়া যায়নি",
+                                text = "No matching results found",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = StudioTextSecondary

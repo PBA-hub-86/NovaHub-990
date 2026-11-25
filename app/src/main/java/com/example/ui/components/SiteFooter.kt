@@ -114,15 +114,15 @@ fun SiteFooter(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Bengali quote
+        // Tagline quote
         Text(
-            text = "“শিল্প ও সংকেতের সন্ধিক্ষণে”",
+            text = "“Where Art Meets Kinetic Code”",
             fontSize = 13.sp,
             color = StudioGold,
             fontFamily = FontFamily.Serif
         )
         Text(
-            text = "At the nexus of art and code",
+            text = "At the nexus of interactive games and photography",
             fontSize = 10.sp,
             color = StudioTextMuted,
             letterSpacing = 0.5.sp

@@ -125,7 +125,7 @@ fun WritingSection(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "04 / BLOG & JOURNAL",
+                    text = "05 / BLOG & JOURNAL",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = StudioGold,

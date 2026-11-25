@@ -84,8 +84,10 @@ fun SiteHeader(
     val navItems = listOf(
         "social" to "Social Feed 🔥",
         "portal" to "Game Portal 🎮",
+        "cloud_gallery" to "Cloud Gallery ☁️",
         "masonry" to "Masonry Stills 📷",
         "writing" to "Blog / Articles ✍️",
+        "profile" to "Profile 👤",
         "contact" to "Write In ✉️",
         "about" to "About"
     )
@@ -314,7 +316,7 @@ fun SiteHeader(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "লগইন",
+                                    text = "Sign In",
                                     color = StudioGold,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold

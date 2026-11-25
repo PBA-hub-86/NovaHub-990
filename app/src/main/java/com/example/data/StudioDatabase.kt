@@ -20,7 +20,7 @@ import androidx.room.RoomDatabase
         PlatformSettings::class,
         WriteInDraft::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class StudioDatabase : RoomDatabase() {
